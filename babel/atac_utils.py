@@ -4,25 +4,22 @@ gene activities, which serve as a baseline for our work
 """
 
 import os
-import sys
 import logging
 import gzip
 import collections
-import argparse
 from typing import *
 
 import numpy as np
 import pandas as pd
 import anndata as ad
-import scanpy as sc
 import scipy
 
 import tqdm
 import intervaltree as itree
 
-import sc_data_loaders
-import genomic_interval
-import utils
+from babel.data import sc_data_loaders
+from babel import genomic_interval
+from babel import utils
 
 logging.basicConfig(level=logging.INFO)
 

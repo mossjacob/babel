@@ -7,7 +7,7 @@ import os
 import sys
 from typing import *
 
-import utils
+from babel import utils
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 assert os.path.isdir(DATA_DIR)

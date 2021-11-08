@@ -1,8 +1,6 @@
 """
 Code for evaluating predicted/truth tables
 """
-import sys
-import os
 import multiprocessing
 from typing import *
 import functools
@@ -11,23 +9,13 @@ import numpy as np
 import pandas as pd
 
 from sklearn.metrics import (
-    adjusted_mutual_info_score,
     cluster,
-    roc_curve,
-    roc_auc_score,
-    average_precision_score,
-    accuracy_score,
-    recall_score,
-    precision_score,
-    f1_score,
-    log_loss,
-    r2_score,
 )
 
 from anndata import AnnData
 
-import adata_utils
-import sc_data_loaders
+from babel import adata_utils
+from babel.data import sc_data_loaders
 
 GENERAL_CELLTYPES_MAPPING = {
     "CD4 T cells": [

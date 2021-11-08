@@ -10,9 +10,8 @@ from typing import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 
-from models import layers
+from babel.models import layers
 
 
 class BCELoss(nn.BCELoss):
@@ -510,7 +509,7 @@ def negative_binom_loss(
     eps: float = 1e-10,
     mean: bool = True,
     debug: bool = False,
-    tb: SummaryWriter = None,
+    tb = None, # SummaryWriter
 ) -> Callable:
     """
     Return a function that calculates the binomial loss
@@ -567,7 +566,7 @@ def zero_inflated_negative_binom_loss(
     eps: float = 1e-10,
     scale_factor: float = 1.0,
     debug: bool = False,
-    tb: SummaryWriter = None,
+    tb = None, #SummaryWriter
 ):
     """
     Return a function that calculates ZINB loss

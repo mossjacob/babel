@@ -16,18 +16,17 @@ import pandas as pd
 import scipy
 import sklearn.metrics as metrics
 
-import mpl_scatter_density
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sns
 
 import scanpy as sc
 
-import adata_utils
-import utils
-
 from sklearn.decomposition import PCA
 from anndata import AnnData
+
+from babel import utils, adata_utils
+
 
 # mpl.rcParams.update(mpl.rcParamsDefault)
 plt.style.use("seaborn-talk")
@@ -213,6 +212,7 @@ def plot_clustering_anndata_direct_label(
         )
         texts.append(t)
     if adjust:
+        from adjustText import adjust_text
         adjust_text(
             texts,
             only_move={"texts": "y"},
@@ -389,6 +389,8 @@ def plot_scatter_with_r(
     if density_heatmap:
         norm = None
         if density_logstretch:
+            from astropy.visualization import LogStretch
+            from astropy.visualization.mpl_normalize import ImageNormalize
             norm = ImageNormalize(
                 vmin=0, vmax=100, stretch=LogStretch(a=density_logstretch)
             )

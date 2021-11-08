@@ -5,30 +5,29 @@ Utility functions for anndata objects
 import os
 import sys
 import logging
-from typing import *
 import multiprocessing
 import functools
 import collections
 import itertools
 import re
-
-os.environ["NUMEXPR_MAX_THREADS"] = "32"
-
 import tqdm
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import scipy
-from statsmodels.stats import multitest
 import sklearn
-from scipy import io
-
 import anndata as ad
+
+from typing import *
+from scipy import io
+from statsmodels.stats import multitest
 from anndata import AnnData
 
-from genomic_interval import GenomicInterval
-import utils
+from babel.genomic_interval import GenomicInterval
+from babel import utils
+
+os.environ["NUMEXPR_MAX_THREADS"] = "32"
+
 
 logging.basicConfig(level=logging.INFO)
 

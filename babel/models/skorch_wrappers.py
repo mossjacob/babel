@@ -1,6 +1,8 @@
 import skorch
 import skorch.utils
 
+from scipy import sparse
+
 
 class AutoEncoderSkorchNet(skorch.NeuralNet):
     """Subclassed so that we can easily extract the encoded layer"""

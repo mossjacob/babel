@@ -10,22 +10,18 @@ import copy
 import functools
 import itertools
 import numpy as np
-import pandas as pd
-import scipy.spatial
 import scanpy as sc
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import skorch
 
 from skorch.helper import predefined_split
 from babel import autoencoders
-from babel import activations, loss_functions, sc_data_loaders
+from babel import activations, loss_functions
+from babel.data import sc_data_loaders
 from babel import utils, adata_utils, model_utils, plot_utils
-from babel import metrics, interpretation
-from babel.models import skorch_wrappers, layers
-
+from babel.models import skorch_wrappers
 
 torch.backends.cudnn.deterministic = True  # For reproducibility
 torch.backends.cudnn.benchmark = False
@@ -383,7 +379,6 @@ def main():
         sc_rna_test_dataset.size_norm_counts.write_h5ad(
             os.path.join(outdir_name, "truth_rna.h5ad")
         )
-        sc_atac_dataset.data_raw.write_h5ad(os.path.join(outdir_name, "full_atac.h5ad"))
         sc_atac_test_dataset.data_raw.write_h5ad(
             os.path.join(outdir_name, "truth_atac.h5ad")
         )

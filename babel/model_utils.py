@@ -3,34 +3,26 @@ Utility functions for working with models, including some callbacks
 """
 
 import os
-import sys
 import logging
-import argparse
 import warnings
-import inspect
 import itertools
 import copy
 import collections
-
-from typing import *
-
-import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import skorch
-
+import numpy as np
 import tqdm
-import gdown
 
-MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-assert os.path.isdir(MODELS_DIR)
-sys.path.append(MODELS_DIR)
-import loss_functions
-import metrics
-import utils
-import autoencoders
+from typing import *
+
+
+from babel import loss_functions
+from babel import metrics
+from babel import utils
+from babel.models import autoencoders
+
 
 DATA_LOADER_PARAMS = {
     "batch_size": 64,
@@ -111,6 +103,7 @@ def load_model(
 
     # Download the model if we are not given a path
     if checkpoint is None:
+        import gdown
         dl_path = gdown.cached_download(
             MODEL_URL,
             path=os.path.join(MODEL_CACHE_DIR, MODEL_FILE_BASENAME),

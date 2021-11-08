@@ -12,7 +12,6 @@ from typing import List, Tuple, Union, Callable
 import functools
 
 import numpy as np
-from scipy import sparse
 
 import torch
 import torch.nn as nn

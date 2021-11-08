@@ -113,3 +113,5 @@ data/mnist/train-labels-idx1-ubyte
 data/simulation/.Rhistory
 .vscode/settings.json
 .Rproj.user
+
+.idea/

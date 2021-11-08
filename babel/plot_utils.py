@@ -15,16 +15,19 @@ import numpy as np
 import pandas as pd
 import scipy
 import sklearn.metrics as metrics
-from sklearn.decomposition import PCA
 
 import mpl_scatter_density
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sns
-from adjustText import adjust_text
 
-from astropy.visualization import LogStretch
-from astropy.visualization.mpl_normalize import ImageNormalize
+import scanpy as sc
+
+import adata_utils
+import utils
+
+from sklearn.decomposition import PCA
+from anndata import AnnData
 
 # mpl.rcParams.update(mpl.rcParamsDefault)
 plt.style.use("seaborn-talk")
@@ -37,11 +40,6 @@ except ModuleNotFoundError:
     pass
 
 
-from anndata import AnnData
-import scanpy as sc
-
-import adata_utils
-import utils
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 assert os.path.isdir(SRC_DIR)

@@ -19,7 +19,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 import skorch
 
 import tqdm
@@ -151,7 +150,7 @@ def load_model(
         logging.info(
             f"Inferred model with basename {checkpoint_basename} be normal (non-naive)"
         )
-        model_class = autoencoders.AssymSplicedAutoEncoder
+        model_class = autoencoders.AsymSplicedAutoEncoder
 
     spliced_net = None
     for hidden_dim_size in [16, 32]:

@@ -9,20 +9,23 @@ import argparse
 import copy
 import functools
 import itertools
-
 import numpy as np
 import pandas as pd
 import scipy.spatial
 import scanpy as sc
-
 import matplotlib.pyplot as plt
-from skorch.helper import predefined_split
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import skorch
-import skorch.helper
+
+from skorch.helper import predefined_split
+from babel import autoencoders
+from babel import activations, loss_functions, sc_data_loaders
+from babel import utils, adata_utils, model_utils, plot_utils
+from babel import metrics, interpretation
+from babel.models import skorch_wrappers, layers
+
 
 torch.backends.cudnn.deterministic = True  # For reproducibility
 torch.backends.cudnn.benchmark = False
@@ -37,17 +40,6 @@ MODELS_DIR = os.path.join(SRC_DIR, "models")
 assert os.path.isdir(MODELS_DIR)
 sys.path.append(MODELS_DIR)
 
-import sc_data_loaders
-import adata_utils
-import model_utils
-import autoencoders
-import loss_functions
-import layers
-import activations
-import plot_utils
-import utils
-import metrics
-import interpretation
 
 logging.basicConfig(level=logging.INFO)
 
@@ -402,7 +394,7 @@ def main():
             if args.naive
             else autoencoders.AssymSplicedAutoEncoder
         )
-        spliced_net = autoencoders.SplicedAutoEncoderSkorchNet(
+        spliced_net = skorch_wrappers.SplicedAutoEncoderSkorchNet(
             module=model_class,
             module__hidden_dim=h_dim,  # Based on hyperparam tuning
             module__input_dim1=sc_rna_dataset.data_raw.shape[1],
@@ -435,7 +427,7 @@ def main():
                     dirname=outdir_name, fn_prefix="net_", monitor="valid_loss_best",
                 ),
             ],
-            train_split=skorch.helper.predefined_split(sc_dual_valid_dataset),
+            train_split=predefined_split(sc_dual_valid_dataset),
             iterator_train__num_workers=8,
             iterator_valid__num_workers=8,
         )

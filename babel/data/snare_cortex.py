@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from babel.data.loaders import (
     SNARESEQ_RNA_DATA_KWARGS, SNARESEQ_ATAC_DATA_KWARGS
 )
-from babel.data import SingleCellDataset, SingleCellDatasetSplit, PairedDataset
+from babel.data.single_cell_dataset import SingleCellDataset, SingleCellDatasetSplit
+from babel.data.datasets import PairedDataset
 
 
 @dataclass

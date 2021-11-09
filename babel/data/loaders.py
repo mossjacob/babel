@@ -16,42 +16,36 @@ import itertools
 import multiprocessing
 import gzip
 import collections
-
-from typing import *
-
 import intervaltree
-
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
 import scipy.sparse
-import matplotlib.pyplot as plt
 import scanpy as sc
-from anndata import AnnData
-
 import tqdm
-
 import sortedcontainers
 
-from babel import utils, adata_utils, plot_utils
+from pathlib import Path
+from typing import *
+from anndata import AnnData
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+from babel import utils
+
+DATA_DIR = Path(os.path.dirname(__file__)).parent.parent / 'data'
 assert os.path.isdir(DATA_DIR)
-SNARESEQ_DATA_DIR = os.path.join(DATA_DIR, "snareseq_GSE126074")
+SNARESEQ_DATA_DIR = DATA_DIR / 'snareseq_GSE126074'
+print(SNARESEQ_DATA_DIR)
 assert os.path.isdir(SNARESEQ_DATA_DIR)
-MM9_GTF = os.path.join(DATA_DIR, "Mus_musculus.NCBIM37.67.gtf.gz")
+MM9_GTF = DATA_DIR / "Mus_musculus.NCBIM37.67.gtf.gz"
 assert os.path.isfile(MM9_GTF)
-MM10_GTF = os.path.join(DATA_DIR, "gencode.vM7.annotation.gtf.gz")
+MM10_GTF = DATA_DIR / 'gencode.vM7.annotation.gtf.gz'
 assert os.path.isfile(MM10_GTF)
-HG38_GTF = os.path.join(DATA_DIR, "Homo_sapiens.GRCh38.100.gtf.gz")
+HG38_GTF = DATA_DIR / 'Homo_sapiens.GRCh38.100.gtf.gz'
 assert os.path.isfile(HG38_GTF)
-HG19_GTF = os.path.join(DATA_DIR, "Homo_sapiens.GRCh37.87.gtf.gz")
+HG19_GTF = DATA_DIR / 'Homo_sapiens.GRCh37.87.gtf.gz'
 assert os.path.isfile(HG19_GTF)
 
 SNARESEQ_ATAC_CELL_INFO = pd.read_csv(
-    os.path.join(
-        SNARESEQ_DATA_DIR, "GSE126074_AdBrainCortex_SNAREseq_chromatin.barcodes.tsv.gz"
-    ),
+    SNARESEQ_DATA_DIR / 'GSE126074_AdBrainCortex_SNAREseq_chromatin.barcodes.tsv.gz',
     sep="\t",
     header=None,
     index_col=0,
@@ -59,9 +53,7 @@ SNARESEQ_ATAC_CELL_INFO = pd.read_csv(
 SNARESEQ_ATAC_CELL_INFO.index.name = "barcodes"
 
 SNARESEQ_ATAC_PEAK_INFO = pd.read_csv(
-    os.path.join(
-        SNARESEQ_DATA_DIR, "GSE126074_AdBrainCortex_SNAREseq_chromatin.peaks.tsv.gz"
-    ),
+    SNARESEQ_DATA_DIR / "GSE126074_AdBrainCortex_SNAREseq_chromatin.peaks.tsv.gz",
     sep="\t",
     header=None,
     index_col=0,
@@ -69,9 +61,7 @@ SNARESEQ_ATAC_PEAK_INFO = pd.read_csv(
 SNARESEQ_ATAC_PEAK_INFO.index.name = "peaks"
 
 SNARESEQ_ATAC_DATA_KWARGS = {
-    "fname": os.path.join(
-        SNARESEQ_DATA_DIR, "GSE126074_AdBrainCortex_SNAREseq_chromatin.counts.mtx.gz"
-    ),
+    "fname": SNARESEQ_DATA_DIR / "GSE126074_AdBrainCortex_SNAREseq_chromatin.counts.mtx.gz",
     "cell_info": SNARESEQ_ATAC_CELL_INFO,
     "gene_info": SNARESEQ_ATAC_PEAK_INFO,
     "transpose": True,

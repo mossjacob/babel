@@ -5,7 +5,6 @@ Some functions live here because otherwise managing their import
 in other places would be overly difficult
 """
 import os
-import sys
 import functools
 import logging
 from typing import *
@@ -13,6 +12,7 @@ import itertools
 import collections
 import gzip
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import scipy
@@ -24,11 +24,12 @@ import torch
 import intervaltree as itree
 import sortedcontainers
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+DATA_DIR = Path(os.path.dirname(__file__)) / "data"
+print(DATA_DIR)
 assert os.path.isdir(DATA_DIR)
-HG38_GTF = os.path.join(DATA_DIR, "Homo_sapiens.GRCh38.100.gtf.gz")
+HG38_GTF = DATA_DIR / "Homo_sapiens.GRCh38.100.gtf.gz"
 assert os.path.isfile(HG38_GTF)
-HG19_GTF = os.path.join(DATA_DIR, "Homo_sapiens.GRCh37.87.gtf.gz")
+HG19_GTF = DATA_DIR / "Homo_sapiens.GRCh37.87.gtf.gz"
 assert os.path.isfile(HG19_GTF)
 
 
@@ -201,7 +202,7 @@ def read_delimited_file(
 
 @functools.lru_cache(maxsize=2, typed=True)
 def read_gtf_gene_to_pos(
-    fname: str = HG38_GTF,
+    fname: Path = HG38_GTF,
     acceptable_types: List[str] = None,
     addtl_attr_filters: dict = None,
     extend_upstream: int = 0,
@@ -215,7 +216,7 @@ def read_gtf_gene_to_pos(
     gene_to_positions = collections.defaultdict(list)
     gene_to_chroms = collections.defaultdict(set)
 
-    opener = gzip.open if fname.endswith(".gz") else open
+    opener = gzip.open if fname.suffix == ".gz" else open
     with opener(fname) as source:
         for line in source:
             if line.startswith(b"#"):

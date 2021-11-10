@@ -15,7 +15,7 @@ from sklearn.metrics import (
 from anndata import AnnData
 
 from babel import adata_utils
-from babel.data import sc_data_loaders
+from babel.data import loaders
 
 GENERAL_CELLTYPES_MAPPING = {
     "CD4 T cells": [
@@ -177,8 +177,8 @@ def top_n_closest_cell(preds, truth, top_n: int = 5, threads: int = 12) -> float
     This is not differentiable
     """
     # The first (zeroth) entry in argosrt will be the cell itself so we ignore that
-    truth_cell_dist_matrix = sc_data_loaders.cell_distance_matrix(truth)
-    preds_cell_dist_matrix = sc_data_loaders.cell_distance_matrix(preds)
+    truth_cell_dist_matrix = loaders.cell_distance_matrix(truth)
+    preds_cell_dist_matrix = loaders.cell_distance_matrix(preds)
 
     pool = multiprocessing.Pool(threads)
     # argsort returns index of *lowest* value first

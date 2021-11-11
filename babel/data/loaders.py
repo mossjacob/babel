@@ -115,7 +115,6 @@ SNARESEQ_RNA_DATA_KWARGS = {
     "sort_by_pos": True,
     "split_by_chrom": True,
     "concat_outputs": True,
-    "binarize": False,
     "filt_cell_min_genes": 200,  # SNAREseq paper: minimum of 200 genes
     "filt_cell_max_genes": 2500,  # SNAREseq paper: maximum of 2500 genes
     "normalize": True,

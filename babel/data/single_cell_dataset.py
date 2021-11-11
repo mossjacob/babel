@@ -43,6 +43,7 @@ class SingleCellDataset(Dataset):
         fname: Union[str, List[str]],
         reader: Callable = sc_read_mtx,
         raw_adata: Union[AnnData, None] = None,  # Should be raw data
+        normalize_count_table=True,
         transpose: bool = True,
         mode: str = "all",
         data_split_by_cluster: str = "leiden",  # Specify as leiden
@@ -217,12 +218,37 @@ class SingleCellDataset(Dataset):
             filter_gene_min_cells=filt_gene_min_cells,
             filter_gene_max_cells=filt_gene_max_cells,
         )
-        self.data_raw = adata_utils.normalize_count_table(  # Normalizes in place
-            self.data_raw,
-            size_factors=calc_size_factors,
-            normalize=normalize,
-            log_trans=log_trans,
+        if normalize_count_table:
+            self.data_raw = adata_utils.normalize_count_table(  # Normalizes in place
+                self.data_raw,
+                size_factors=calc_size_factors,
+                normalize=normalize,
+                log_trans=log_trans,
+            )
+        self._size_norm_log_counts = AnnData(
+            scipy.sparse.csr_matrix(self.data_raw.X),
+            obs=pd.DataFrame(index=self.data_raw.obs_names),
+            var=pd.DataFrame(index=self.data_raw.var_names),
+            obsm=self.data_raw.obsm
         )
+        size_norm_counts = np.exp(utils.ensure_arr(self.data_raw.X)) - 1
+        self._size_norm_counts = AnnData(
+            scipy.sparse.csr_matrix(size_norm_counts),
+            obs=pd.DataFrame(index=self.data_raw.obs_names),
+            var=pd.DataFrame(index=self.data_raw.var_names),
+            obsm=self.data_raw.obsm
+        )
+        plot_utils.preprocess_anndata(
+            self._size_norm_log_counts,
+            louvain_resolution=self.cluster_res,
+            leiden_resolution=self.cluster_res
+        )
+        plot_utils.preprocess_anndata(
+            self._size_norm_counts,
+            louvain_resolution=self.cluster_res,
+            leiden_resolution=self.cluster_res
+        )
+        self.data_raw.X = utils.ensure_arr(self.data_raw.X)
 
         if clip > 0:
             assert isinstance(clip, float) and 0.0 < clip < 50.0
@@ -593,6 +619,7 @@ class SingleCellDataset(Dataset):
             scipy.sparse.csr_matrix(self.data_raw.raw.X),
             obs=pd.DataFrame(index=self.data_raw.obs_names),
             var=pd.DataFrame(index=self.data_raw.var_names),
+            obsm=self.data_raw.obsm
         )
         sc.pp.normalize_total(raw_counts_anndata, inplace=True)
         # After normalizing, do clustering

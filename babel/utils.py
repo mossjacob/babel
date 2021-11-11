@@ -26,10 +26,8 @@ import sortedcontainers
 
 
 DATA_DIR = Path(os.path.dirname(__file__)).parent / "data"
-print(DATA_DIR)
 assert DATA_DIR.is_dir()
 HG38_GTF = DATA_DIR / "Homo_sapiens.GRCh38.100.gtf.gz"
-print(HG38_GTF)
 assert HG38_GTF.is_file()
 HG19_GTF = DATA_DIR / "Homo_sapiens.GRCh37.87.gtf.gz"
 assert HG19_GTF.is_file()

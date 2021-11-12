@@ -17,11 +17,13 @@ import torch.nn as nn
 import skorch
 
 from skorch.helper import predefined_split
-from babel import autoencoders
 from babel import activations, loss_functions
-from babel.data import sc_data_loaders
 from babel import utils, adata_utils, model_utils, plot_utils
-from babel.models import skorch_wrappers
+from babel.data import loaders, SingleCellDatasetSplit, SingleCellDataset, PairedDataset
+from babel.models import skorch_wrappers, autoencoders
+from babel.data.processor import FilterConfig, join_cell_info, join_gene_info
+from babel.data.loaders import sc_read_mtx
+
 
 torch.backends.cudnn.deterministic = True  # For reproducibility
 torch.backends.cudnn.benchmark = False
@@ -185,10 +187,19 @@ def main():
     # Borrow parameters
     logging.info("Reading RNA data")
     if args.snareseq:
-        rna_data_kwargs = copy.copy(sc_data_loaders.SNARESEQ_RNA_DATA_KWARGS)
+        rna_data_kwargs = copy.copy(loaders.SNARESEQ_RNA_DATA_KWARGS)
+        atac_data_kwargs = copy.copy(loaders.SNARESEQ_ATAC_DATA_KWARGS)
+        adata_gex = sc_read_mtx(rna_data_kwargs['fname'])
+        adata_atac = sc_read_mtx(atac_data_kwargs['fname'])
     elif args.shareseq:
-        logging.info(f"Loading in SHAREseq RNA data for: {args.shareseq}")
-        rna_data_kwargs = copy.copy(sc_data_loaders.SNARESEQ_RNA_DATA_KWARGS)
+        logging.info(f"Loading in SHAREseq RNA and ATAC data for: {args.shareseq}")
+        atac_data_kwargs = copy.copy(loaders.SNARESEQ_ATAC_DATA_KWARGS)
+        atac_data_kwargs["reader"] = None
+        atac_data_kwargs["fname"] = None
+        atac_data_kwargs["cell_info"] = None
+        atac_data_kwargs["gene_info"] = None
+        atac_data_kwargs["transpose"] = False
+        rna_data_kwargs = copy.copy(loaders.SNARESEQ_RNA_DATA_KWARGS)
         rna_data_kwargs["fname"] = None
         rna_data_kwargs["reader"] = None
         rna_data_kwargs["cell_info"] = None
@@ -196,6 +207,7 @@ def main():
         rna_data_kwargs["transpose"] = False
         # Load in the datasets
         shareseq_rna_adatas = []
+        atac_adatas = []
         for tissuetype in args.shareseq:
             shareseq_rna_adatas.append(
                 adata_utils.load_shareseq_data(
@@ -204,6 +216,14 @@ def main():
                     mode="RNA",
                 )
             )
+            atac_adatas.append(
+                adata_utils.load_shareseq_data(
+                    tissuetype,
+                    dirname="/data/wukevin/commonspace_data/GSE140203_SHAREseq",
+                    mode="ATAC",
+                )
+            )
+
         shareseq_rna_adata = shareseq_rna_adatas[0]
         if len(shareseq_rna_adatas) > 1:
             shareseq_rna_adata = shareseq_rna_adata.concatenate(
@@ -212,59 +232,13 @@ def main():
                 batch_key="tissue",
                 batch_categories=args.shareseq,
             )
-        rna_data_kwargs["raw_adata"] = shareseq_rna_adata
-    else:
-        rna_data_kwargs = copy.copy(sc_data_loaders.TENX_PBMC_RNA_DATA_KWARGS)
-        rna_data_kwargs["fname"] = args.data
-        if args.nofilter:
-            rna_data_kwargs = {
-                k: v for k, v in rna_data_kwargs.items() if not k.startswith("filt_")
-            }
-    rna_data_kwargs["data_split_by_cluster_log"] = not args.linear
-    rna_data_kwargs["data_split_by_cluster"] = args.clustermethod
+        adata_gex = shareseq_rna_adata
 
-    sc_rna_dataset = sc_data_loaders.SingleCellDataset(
-        valid_cluster_id=args.validcluster,
-        test_cluster_id=args.testcluster,
-        **rna_data_kwargs,
-    )
-
-    sc_rna_train_dataset = sc_data_loaders.SingleCellDatasetSplit(
-        sc_rna_dataset, split="train",
-    )
-    sc_rna_valid_dataset = sc_data_loaders.SingleCellDatasetSplit(
-        sc_rna_dataset, split="valid",
-    )
-    sc_rna_test_dataset = sc_data_loaders.SingleCellDatasetSplit(
-        sc_rna_dataset, split="test",
-    )
-
-    # ATAC
-    logging.info("Aggregating ATAC clusters")
-    if args.snareseq:
-        atac_data_kwargs = copy.copy(sc_data_loaders.SNARESEQ_ATAC_DATA_KWARGS)
-    elif args.shareseq:
-        logging.info(f"Loading in SHAREseq ATAC data for {args.shareseq}")
-        atac_data_kwargs = copy.copy(sc_data_loaders.SNARESEQ_ATAC_DATA_KWARGS)
-        atac_data_kwargs["reader"] = None
-        atac_data_kwargs["fname"] = None
-        atac_data_kwargs["cell_info"] = None
-        atac_data_kwargs["gene_info"] = None
-        atac_data_kwargs["transpose"] = False
-        atac_adatas = []
-        for tissuetype in args.shareseq:
-            atac_adatas.append(
-                adata_utils.load_shareseq_data(
-                    tissuetype,
-                    dirname="/data/wukevin/commonspace_data/GSE140203_SHAREseq",
-                    mode="ATAC",
-                )
-            )
         atac_bins = [a.var_names for a in atac_adatas]
         if len(atac_adatas) > 1:
-            atac_bins_harmonized = sc_data_loaders.harmonize_atac_intervals(*atac_bins)
+            atac_bins_harmonized = loaders.harmonize_atac_intervals(*atac_bins)
             atac_adatas = [
-                sc_data_loaders.repool_atac_bins(a, atac_bins_harmonized)
+                loaders.repool_atac_bins(a, atac_bins_harmonized)
                 for a in atac_adatas
             ]
         shareseq_atac_adata = atac_adatas[0]
@@ -275,57 +249,121 @@ def main():
                 batch_key="tissue",
                 batch_categories=args.shareseq,
             )
-        atac_data_kwargs["raw_adata"] = shareseq_atac_adata
+        adata_atac = shareseq_atac_adata
+
     else:
+        rna_data_kwargs = copy.copy(loaders.TENX_PBMC_RNA_DATA_KWARGS)
+        rna_data_kwargs["fname"] = args.data
+        if args.nofilter:
+            rna_data_kwargs = {
+                k: v for k, v in rna_data_kwargs.items() if not k.startswith("filt_")
+            }
+        adata_gex = rna_data_kwargs['reader'](args.data)
         atac_parsed = [
             utils.sc_read_10x_h5_ft_type(fname, "Peaks") for fname in args.data
         ]
         if len(atac_parsed) > 1:
-            atac_bins = sc_data_loaders.harmonize_atac_intervals(
+            atac_bins = loaders.harmonize_atac_intervals(
                 atac_parsed[0].var_names, atac_parsed[1].var_names
             )
             for bins in atac_parsed[2:]:
-                atac_bins = sc_data_loaders.harmonize_atac_intervals(
+                atac_bins = loaders.harmonize_atac_intervals(
                     atac_bins, bins.var_names
                 )
             logging.info(f"Aggregated {len(atac_bins)} bins")
         else:
             atac_bins = list(atac_parsed[0].var_names)
 
-        atac_data_kwargs = copy.copy(sc_data_loaders.TENX_PBMC_ATAC_DATA_KWARGS)
+        atac_data_kwargs = copy.copy(loaders.TENX_PBMC_ATAC_DATA_KWARGS)
         atac_data_kwargs["fname"] = rna_data_kwargs["fname"]
         atac_data_kwargs["pool_genomic_interval"] = 0  # Do not pool
-        atac_data_kwargs["reader"] = functools.partial(
+        reader = functools.partial(
             utils.sc_read_multi_files,
-            reader=lambda x: sc_data_loaders.repool_atac_bins(
+            reader=lambda x: loaders.repool_atac_bins(
                 utils.sc_read_10x_h5_ft_type(x, "Peaks"), atac_bins,
             ),
         )
-    atac_data_kwargs["cluster_res"] = 0  # Do not bother clustering ATAC data
+        adata_atac = reader(rna_data_kwargs['fname'])
 
-    sc_atac_dataset = sc_data_loaders.SingleCellDataset(
+    if rna_data_kwargs['transpose']:
+        adata_gex = adata_gex.T
+    if atac_data_kwargs['transpose']:
+        adata_atac = adata_atac.T
+    rna_data_kwargs["data_split_by_cluster_log"] = not args.linear
+    rna_data_kwargs["data_split_by_cluster"] = args.clustermethod
+
+    # Filter and join gene and cell info
+    def is_filter_kwarg(k):
+        return (
+                k.endswith('_genes') or
+                k.endswith('_counts') or
+                k.endswith('_cells')
+        )
+    for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
+        filter_keys = list(filter(is_filter_kwarg, data_kwargs.keys()))
+        filter_vals = [data_kwargs[k] for k in filter_keys]
+        config = FilterConfig(dict(zip(map(lambda s: s[5:], filter_keys), filter_vals)))
+        adata_utils.filter_adata_cells_and_genes(adata, config)
+        join_gene_info(adata, data_kwargs['gene_info'])
+        join_cell_info(adata, data_kwargs['cell_info'])
+
+    # Normalize counts
+    adata_gex = adata_utils.normalize_count_table(  # Normalizes in place
+        adata_gex,
+        size_factors=rna_data_kwargs['calc_size_factors'],
+        normalize=rna_data_kwargs['normalize'],
+        log_trans=rna_data_kwargs['log_trans'],
+    )
+
+    sc_rna_dataset = SingleCellDataset(
+        adata_gex,
+        valid_cluster_id=args.validcluster,
+        test_cluster_id=args.testcluster,
+        **rna_data_kwargs,
+    )
+
+    sc_rna_train_dataset = SingleCellDatasetSplit(
+        sc_rna_dataset, split="train",
+    )
+    sc_rna_valid_dataset = SingleCellDatasetSplit(
+        sc_rna_dataset, split="valid",
+    )
+    sc_rna_test_dataset = SingleCellDatasetSplit(
+        sc_rna_dataset, split="test",
+    )
+
+    # ATAC
+    logging.info("Aggregating ATAC clusters")
+    atac_data_kwargs["cluster_res"] = 0  # Do not bother clustering ATAC data
+    if atac_data_kwargs['binarize']:
+        # If we are binarizing data we probably don't care about raw counts
+        # self.data_raw.raw = self.data_raw.copy()  # Store original counts
+        adata_atac.X[adata_atac.X.nonzero()] = 1  # .X here is a csr matrix
+
+    sc_atac_dataset = SingleCellDataset(
+        adata_atac,
         predefined_split=sc_rna_dataset, **atac_data_kwargs
     )
-    sc_atac_train_dataset = sc_data_loaders.SingleCellDatasetSplit(
+    sc_atac_train_dataset = SingleCellDatasetSplit(
         sc_atac_dataset, split="train",
     )
-    sc_atac_valid_dataset = sc_data_loaders.SingleCellDatasetSplit(
+    sc_atac_valid_dataset = SingleCellDatasetSplit(
         sc_atac_dataset, split="valid",
     )
-    sc_atac_test_dataset = sc_data_loaders.SingleCellDatasetSplit(
+    sc_atac_test_dataset = SingleCellDatasetSplit(
         sc_atac_dataset, split="test",
     )
 
-    sc_dual_train_dataset = sc_data_loaders.PairedDataset(
+    sc_dual_train_dataset = PairedDataset(
         sc_rna_train_dataset, sc_atac_train_dataset, flat_mode=True,
     )
-    sc_dual_valid_dataset = sc_data_loaders.PairedDataset(
+    sc_dual_valid_dataset = PairedDataset(
         sc_rna_valid_dataset, sc_atac_valid_dataset, flat_mode=True,
     )
-    sc_dual_test_dataset = sc_data_loaders.PairedDataset(
+    sc_dual_test_dataset = PairedDataset(
         sc_rna_test_dataset, sc_atac_test_dataset, flat_mode=True,
     )
-    sc_dual_full_dataset = sc_data_loaders.PairedDataset(
+    sc_dual_full_dataset = PairedDataset(
         sc_rna_dataset, sc_atac_dataset, flat_mode=True,
     )
 

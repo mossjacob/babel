@@ -107,39 +107,39 @@ class SingleCellDataset(Dataset):
         logging.info(
             f"Got AnnData object {str(adata)}"
         )
-        self.data_raw = adata
+        self.adata = adata
         assert isinstance(
-            self.data_raw, AnnData
-        ), f"Expected AnnData but got {type(self.data_raw)}"
-        if not isinstance(self.data_raw.X, scipy.sparse.csr_matrix):
-            self.data_raw.X = scipy.sparse.csr_matrix(
-                self.data_raw.X
+            self.adata, AnnData
+        ), f"Expected AnnData but got {type(self.adata)}"
+        if not isinstance(self.adata.X, scipy.sparse.csr_matrix):
+            self.adata.X = scipy.sparse.csr_matrix(
+                self.adata.X
             )  # Convert to sparse matrix
 
         # Filter out undesirable var/obs
-        self.data_raw = adata_utils.filter_adata(
-            self.data_raw, filt_cells=filter_samples, filt_var=filter_features
+        self.adata = adata_utils.filter_adata(
+            self.adata, filt_cells=filter_samples, filt_var=filter_features
         )
 
         # Attach obs/var annotations
         if sort_by_pos:
             genes_reordered, chroms_reordered = reorder_genes_by_pos(
-                self.data_raw.var_names, gtf_file=gtf_file, return_chrom=True
+                self.adata.var_names, gtf_file=gtf_file, return_chrom=True
             )
-            self.data_raw = self.data_raw[:, genes_reordered]
+            self.adata = self.adata[:, genes_reordered]
 
         self.__annotate_chroms(gtf_file)
         if self.autosomes_only:
             autosomal_idx = [
                 i
-                for i, chrom in enumerate(self.data_raw.var["chrom"])
+                for i, chrom in enumerate(self.adata.var["chrom"])
                 if utils.is_numeric(chrom.strip("chr"))
             ]
-            self.data_raw = self.data_raw[:, autosomal_idx]
+            self.adata = self.adata[:, autosomal_idx]
 
         # Sort by the observation names so we can combine datasets
-        sort_order_idx = np.argsort(self.data_raw.obs_names)
-        self.data_raw = self.data_raw[sort_order_idx, :]
+        sort_order_idx = np.argsort(self.adata.obs_names)
+        self.adata = self.adata[sort_order_idx, :]
         # NOTE pooling occurs AFTER feature/observation filtering
         if pool_genomic_interval:
             self.__pool_features(pool_genomic_interval=pool_genomic_interval)
@@ -147,19 +147,19 @@ class SingleCellDataset(Dataset):
             self.__annotate_chroms(gtf_file)
 
         # Preprocess the data now that we're done filtering
-        adata_utils.annotate_basic_adata_metrics(self.data_raw)
+        adata_utils.annotate_basic_adata_metrics(self.adata)
         self._size_norm_log_counts = AnnData(
-            scipy.sparse.csr_matrix(self.data_raw.X),
-            obs=pd.DataFrame(index=self.data_raw.obs_names),
-            var=pd.DataFrame(index=self.data_raw.var_names),
-            obsm=self.data_raw.obsm
+            scipy.sparse.csr_matrix(self.adata.X),
+            obs=pd.DataFrame(index=self.adata.obs_names),
+            var=pd.DataFrame(index=self.adata.var_names),
+            obsm=self.adata.obsm
         )
-        size_norm_counts = np.exp(utils.ensure_arr(self.data_raw.X)) - 1
+        size_norm_counts = np.exp(utils.ensure_arr(self.adata.X)) - 1
         self._size_norm_counts = AnnData(
             scipy.sparse.csr_matrix(size_norm_counts),
-            obs=pd.DataFrame(index=self.data_raw.obs_names),
-            var=pd.DataFrame(index=self.data_raw.var_names),
-            obsm=self.data_raw.obsm
+            obs=pd.DataFrame(index=self.adata.obs_names),
+            var=pd.DataFrame(index=self.adata.var_names),
+            obsm=self.adata.obsm
         )
         plot_utils.preprocess_anndata(
             self._size_norm_log_counts,
@@ -171,13 +171,13 @@ class SingleCellDataset(Dataset):
             louvain_resolution=self.cluster_res,
             leiden_resolution=self.cluster_res
         )
-        self.data_raw.X = utils.ensure_arr(self.data_raw.X)
+        self.adata.X = utils.ensure_arr(self.adata.X)
 
         if clip > 0:
             assert isinstance(clip, float) and 0.0 < clip < 50.0
             logging.info(f"Clipping to {clip} percentile")
             clip_low, clip_high = np.percentile(
-                self.data_raw.X.flatten(), [clip, 100.0 - clip]
+                self.adata.X.flatten(), [clip, 100.0 - clip]
             )
             if clip_low == clip_high == 0:
                 logging.warning("Skipping clipping, as clipping intervals are 0")
@@ -185,31 +185,31 @@ class SingleCellDataset(Dataset):
                 assert (
                     clip_low < clip_high
                 ), f"Got discordant values for clipping ends: {clip_low} {clip_high}"
-                self.data_raw.X = np.clip(self.data_raw.X, clip_low, clip_high)
+                self.adata.X = np.clip(self.adata.X, clip_low, clip_high)
 
         # Apply any final transformations
         if self.transforms:
             for trans in self.transforms:
-                self.data_raw.X = trans(self.data_raw.X)
+                self.adata.X = trans(self.adata.X)
 
         # Make sure the data is a sparse matrix
-        if not isinstance(self.data_raw.X, scipy.sparse.csr_matrix):
-            self.data_raw.X = scipy.sparse.csr_matrix(self.data_raw.X)
+        if not isinstance(self.adata.X, scipy.sparse.csr_matrix):
+            self.adata.X = scipy.sparse.csr_matrix(self.adata.X)
 
         # Do all normalization before we split to make sure all folds get the same normalization
         self.data_split_to_idx = {}
         if predefined_split is not None:
             logging.info("Got predefined split, ignoring mode")
             # Subset items
-            self.data_raw = self.data_raw[
+            self.adata = self.adata[
                 [
                     i
-                    for i in predefined_split.data_raw.obs.index
-                    if i in self.data_raw.obs.index
+                    for i in predefined_split.adata.obs.index
+                    if i in self.adata.obs.index
                 ],
             ]
             assert (
-                self.data_raw.n_obs > 0
+                self.adata.n_obs > 0
             ), "No intersected obs names from predefined split"
             # Carry over cluster indexing
             self.data_split_to_idx = copy.copy(predefined_split.data_split_to_idx)
@@ -227,10 +227,10 @@ class SingleCellDataset(Dataset):
                 self.data_split_to_idx = self.__split_train_valid_test()
         else:
             logging.info("Got data split skip, skipping data split")
-        self.data_split_to_idx["all"] = np.arange(len(self.data_raw))
+        self.data_split_to_idx["all"] = np.arange(len(self.adata))
 
         self.size_factors = (
-            torch.from_numpy(self.data_raw.obs.size_factors.values).type(
+            torch.from_numpy(self.adata.obs.size_factors.values).type(
                 torch.FloatTensor
             )
             if self.return_sf
@@ -243,9 +243,9 @@ class SingleCellDataset(Dataset):
         # Perform file backing if necessary
         self.data_raw_cache_fname = ""
         if self.cache_prefix:
-            self.data_raw_cache_fname = self.cache_prefix + ".data_raw.h5ad"
+            self.data_raw_cache_fname = self.cache_prefix + ".adata.h5ad"
             logging.info(f"Setting cache at {self.data_raw_cache_fname}")
-            self.data_raw.filename = self.data_raw_cache_fname
+            self.adata.filename = self.data_raw_cache_fname
             if hasattr(self, "_size_norm_counts"):
                 size_norm_cache_name = self.cache_prefix + ".size_norm_counts.h5ad"
                 logging.info(
@@ -265,28 +265,28 @@ class SingleCellDataset(Dataset):
         """Annotates chromosome information on the var field, without the chr prefix"""
         # gtf_file can be empty if we're using atac intervals
         feature_chroms = (
-            get_chrom_from_intervals(self.data_raw.var_names)
-            if list(self.data_raw.var_names)[0].startswith("chr")
-            else get_chrom_from_genes(self.data_raw.var_names, gtf_file)
+            get_chrom_from_intervals(self.adata.var_names)
+            if list(self.adata.var_names)[0].startswith("chr")
+            else get_chrom_from_genes(self.adata.var_names, gtf_file)
         )
-        self.data_raw.var["chrom"] = feature_chroms
+        self.adata.var["chrom"] = feature_chroms
 
     def __pool_features(self, pool_genomic_interval: Union[int, List[str]]):
-        n_obs = self.data_raw.n_obs
+        n_obs = self.adata.n_obs
         if isinstance(pool_genomic_interval, int):
             if pool_genomic_interval > 0:
                 # WARNING This will wipe out any existing var information
                 idx, names = get_indices_to_combine(
-                    list(self.data_raw.var.index), interval=pool_genomic_interval
+                    list(self.adata.var.index), interval=pool_genomic_interval
                 )
                 data_raw_aggregated = combine_array_cols_by_idx(  # Returns np ndarray
-                    self.data_raw.X,
+                    self.adata.X,
                     idx,
                 )
                 data_raw_aggregated = scipy.sparse.csr_matrix(data_raw_aggregated)
-                self.data_raw = AnnData(
+                self.adata = AnnData(
                     data_raw_aggregated,
-                    obs=self.data_raw.obs,
+                    obs=self.adata.obs,
                     var=pd.DataFrame(index=names),
                 )
             elif pool_genomic_interval < 0:
@@ -294,34 +294,34 @@ class SingleCellDataset(Dataset):
                     pool_genomic_interval == -1
                 ), f"Invalid value: {pool_genomic_interval}"
                 # Pool based on proximity to genes
-                data_raw_aggregated, names = combine_by_proximity(self.data_raw)
-                self.data_raw = AnnData(
+                data_raw_aggregated, names = combine_by_proximity(self.adata)
+                self.adata = AnnData(
                     data_raw_aggregated,
-                    obs=self.data_raw.obs,
+                    obs=self.adata.obs,
                     var=pd.DataFrame(index=names),
                 )
             else:
                 raise ValueError(f"Invalid integer value: {pool_genomic_interval}")
         elif isinstance(pool_genomic_interval, (list, set, tuple)):
             idx = get_indices_to_form_target_intervals(
-                self.data_raw.var.index, target_intervals=pool_genomic_interval
+                self.adata.var.index, target_intervals=pool_genomic_interval
             )
             data_raw_aggregated = scipy.sparse.csr_matrix(
                 combine_array_cols_by_idx(
-                    self.data_raw.X,
+                    self.adata.X,
                     idx,
                 )
             )
-            self.data_raw = AnnData(
+            self.adata = AnnData(
                 data_raw_aggregated,
-                obs=self.data_raw.obs,
+                obs=self.adata.obs,
                 var=pd.DataFrame(index=pool_genomic_interval),
             )
         else:
             raise TypeError(
                 f"Unrecognized type for pooling features: {type(pool_genomic_interval)}"
             )
-        assert self.data_raw.n_obs == n_obs
+        assert self.adata.n_obs == n_obs
 
     def __split_train_valid_test(self) -> Dict[str, List[int]]:
         """
@@ -330,7 +330,7 @@ class SingleCellDataset(Dataset):
         logging.warning(
             f"Constructing {self.mode} random data split - not recommended due to potential leakage between data split"
         )
-        indices = np.arange(self.data_raw.n_obs)
+        indices = np.arange(self.adata.n_obs)
         (train_idx, valid_idx, test_idx,) = shuffle_indices_train_valid_test(
             indices, shuffle=True, seed=1234, valid=0.15, test=0.15
         )
@@ -419,11 +419,11 @@ class SingleCellDataset(Dataset):
     def __get_chrom_idx(self) -> Dict[str, np.ndarray]:
         """Helper func for figuring out which feature indexes are on each chromosome"""
         chromosomes = sorted(
-            list(set(self.data_raw.var["chrom"]))
+            list(set(self.adata.var["chrom"]))
         )  # Sort to guarantee consistent ordering
         chrom_to_idx = collections.OrderedDict()
         for chrom in chromosomes:
-            chrom_to_idx[chrom] = np.where(self.data_raw.var["chrom"] == chrom)
+            chrom_to_idx[chrom] = np.where(self.adata.var["chrom"] == chrom)
         return chrom_to_idx
 
     def __get_chrom_split_features(self, i):
@@ -431,7 +431,7 @@ class SingleCellDataset(Dataset):
         if self.x_dropout:
             raise NotImplementedError
         features = torch.from_numpy(
-            utils.ensure_arr(self.data_raw.X[i]).flatten()
+            utils.ensure_arr(self.adata.X[i]).flatten()
         ).type(torch.FloatTensor)
         assert len(features.shape) == 1  # Assumes one dimensional vector of features
 
@@ -443,7 +443,7 @@ class SingleCellDataset(Dataset):
 
     def __len__(self):
         """Number of examples"""
-        return self.data_raw.n_obs
+        return self.adata.n_obs
 
     def get_item_data_split(self, idx: int, split: str):
         """Get the i-th item in the split (e.g. train)"""
@@ -456,7 +456,7 @@ class SingleCellDataset(Dataset):
     def __getitem__(self, i):
         # TODO compatibility with slices
         expression_data = (
-            torch.from_numpy(utils.ensure_arr(self.data_raw.X[i]).flatten()).type(
+            torch.from_numpy(utils.ensure_arr(self.adata.X[i]).flatten()).type(
                 torch.FloatTensor
             )
             if not self.split_by_chrom
@@ -477,7 +477,7 @@ class SingleCellDataset(Dataset):
         if self.y_mode.endswith("raw_count"):
             key = self.size_norm_counts.obs_names[i]
             target = torch.from_numpy(
-                utils.ensure_arr(self.data_raw.raw.var_vector(key))
+                utils.ensure_arr(self.adata.raw.var_vector(key))
             ).type(torch.FloatTensor)
         elif self.y_mode.endswith("size_norm"):
             key = self.size_norm_counts.obs_names[i]
@@ -486,7 +486,7 @@ class SingleCellDataset(Dataset):
             )
         elif self.y_mode == "x":
             target = torch.from_numpy(
-                utils.ensure_arr(self.data_raw.X[y_idx]).flatten()
+                utils.ensure_arr(self.adata.X[y_idx]).flatten()
             ).type(torch.FloatTensor)
         else:
             raise NotImplementedError(f"Unrecognized y_mode: {self.y_mode}")
@@ -503,13 +503,13 @@ class SingleCellDataset(Dataset):
             if not self.return_pbulk:
                 retval.append(target)
             else:  # Return both target and psuedobulk
-                ith_cluster = self.data_raw.obs.iloc[i]["leiden"]
+                ith_cluster = self.adata.obs.iloc[i]["leiden"]
                 pbulk = torch.from_numpy(
                     self.get_cluster_psuedobulk().var_vector(ith_cluster)
                 ).type(torch.FloatTensor)
                 retval.append((target, pbulk))
         elif self.return_pbulk:
-            ith_cluster = self.data_raw.obs.iloc[i]["leiden"]
+            ith_cluster = self.adata.obs.iloc[i]["leiden"]
             pbulk = torch.from_numpy(
                 self.get_cluster_psuedobulk().var_vector(ith_cluster)
             ).type(torch.FloatTensor)
@@ -533,16 +533,16 @@ class SingleCellDataset(Dataset):
         """Computes and stores table of normalized counts w/ size factor adjustment and no other normalization"""
         if not hasattr(self, "_size_norm_counts"):
             self._size_norm_counts = self._set_size_norm_counts()
-        assert self._size_norm_counts.shape == self.data_raw.shape
+        assert self._size_norm_counts.shape == self.adata.shape
         return self._size_norm_counts
 
     def _set_size_norm_counts(self) -> AnnData:
         logging.info(f"Setting size normalized counts")
         raw_counts_anndata = AnnData(
-            scipy.sparse.csr_matrix(self.data_raw.raw.X),
-            obs=pd.DataFrame(index=self.data_raw.obs_names),
-            var=pd.DataFrame(index=self.data_raw.var_names),
-            obsm=self.data_raw.obsm
+            scipy.sparse.csr_matrix(self.adata.raw.X),
+            obs=pd.DataFrame(index=self.adata.obs_names),
+            var=pd.DataFrame(index=self.adata.var_names),
+            obsm=self.adata.obsm
         )
         sc.pp.normalize_total(raw_counts_anndata, inplace=True)
         # After normalizing, do clustering
@@ -558,7 +558,7 @@ class SingleCellDataset(Dataset):
         """Compute and store adata of counts with size factor adjustment and log normalization"""
         if not hasattr(self, "_size_norm_log_counts"):
             self._size_norm_log_counts = self._set_size_norm_log_counts()
-        assert self._size_norm_log_counts.shape == self.data_raw.shape
+        assert self._size_norm_log_counts.shape == self.adata.shape
         return self._size_norm_log_counts
 
     def _set_size_norm_log_counts(self) -> AnnData:
@@ -581,28 +581,28 @@ class SingleCellDataset(Dataset):
         If normalize is set to true, then we normalize such that each cluster's row
         sums to the median count from each cell
         """
-        assert mode in self.data_raw.obs.columns
-        cluster_labels = sorted(list(set(self.data_raw.obs[mode])))
+        assert mode in self.adata.obs.columns
+        cluster_labels = sorted(list(set(self.adata.obs[mode])))
         norm_counts = self.get_normalized_counts()
         aggs = []
         for cluster in cluster_labels:
-            cluster_cells = np.where(self.data_raw.obs[mode] == cluster)
+            cluster_cells = np.where(self.adata.obs[mode] == cluster)
             pbulk = norm_counts.X[cluster_cells]
             pbulk_aggregate = np.sum(pbulk, axis=0, keepdims=True)
             if normalize:
                 pbulk_aggregate = (
                     pbulk_aggregate
                     / np.sum(pbulk_aggregate)
-                    * self.data_raw.uns["median_counts"]
+                    * self.adata.uns["median_counts"]
                 )
                 assert np.isclose(
-                    np.sum(pbulk_aggregate), self.data_raw.uns["median_counts"]
+                    np.sum(pbulk_aggregate), self.adata.uns["median_counts"]
                 )
             aggs.append(pbulk_aggregate)
         retval = AnnData(
             np.vstack(aggs),
             obs={mode: cluster_labels},
-            var=self.data_raw.var,
+            var=self.adata.var,
         )
         return retval
 
@@ -635,14 +635,14 @@ class SingleCellDatasetSplit(Dataset):
         return self.dset.size_norm_counts[indices].copy()
 
     @cached_property
-    def data_raw(self) -> AnnData:
+    def adata(self) -> AnnData:
         indices = self.dset.data_split_to_idx[self.split]
-        return self.dset.data_raw[indices].copy()
+        return self.dset.adata[indices].copy()
 
     @cached_property
     def obs_names(self):
         indices = self.dset.data_split_to_idx[self.split]
-        return self.dset.data_raw.obs_names[indices]
+        return self.dset.adata.obs_names[indices]
 
 
 class SingleCellProteinDataset(Dataset):
@@ -682,19 +682,19 @@ class SingleCellProteinDataset(Dataset):
         # Since this normalization is independently done PER CELL we don't have to
         # worry about doing this after we do subsetting
         clr_counts = clr_transform(self.raw_counts.X)
-        # Use data_raw to be more similar to SingleCellDataset
-        self.data_raw = AnnData(
+        # Use adata to be more similar to SingleCellDataset
+        self.adata = AnnData(
             clr_counts,
             obs=self.raw_counts.obs,
             var=self.raw_counts.var,
         )
-        self.data_raw.raw = self.raw_counts
+        self.adata.raw = self.raw_counts
 
     def __len__(self):
-        return self.data_raw.n_obs
+        return self.adata.n_obs
 
     def __getitem__(self, i: int):
-        clr_vec = self.data_raw.X[i].flatten()
+        clr_vec = self.adata.X[i].flatten()
         clr_tensor = torch.from_numpy(clr_vec).type(torch.FloatTensor)
         return clr_tensor, clr_tensor
 
@@ -718,11 +718,11 @@ class SimSingleCellRnaDataset(Dataset):
         self.y_mode = y_mode
         self.return_sf = return_sf
 
-        self.data_raw = sc.read_csv(counts_fname, first_column_names=True)
+        self.adata = sc.read_csv(counts_fname, first_column_names=True)
         if normalize:
             # Note that we normalize the ENTIRE DATASET as a whole
             # We don't subset till later, so all data splits have the same normalization
-            self.data_raw = adata_utils.normalize_count_table(self.data_raw)
+            self.adata = adata_utils.normalize_count_table(self.adata)
 
         self.labels = None
         if labels_fname:
@@ -738,45 +738,45 @@ class SimSingleCellRnaDataset(Dataset):
                 indices_valid,
                 indices_test,
             ) = shuffle_indices_train_valid_test(
-                np.arange(self.data_raw.n_obs),
+                np.arange(self.adata.n_obs),
                 test=0,
                 valid=0.2,
             )
             if self.mode == "train":
-                self.data_raw = self.data_raw[indices_train]
+                self.adata = self.adata[indices_train]
                 if self.labels is not None:
                     self.labels = self.labels[indices_train]
             elif self.mode == "valid":
-                self.data_raw = self.data_raw[indices_valid]
+                self.adata = self.adata[indices_valid]
                 if self.labels is not None:
                     self.labels = self.labels[indices_valid]
             elif self.mode == "test":
-                self.data_raw = self.data_raw[indices_test]
+                self.adata = self.adata[indices_test]
                 if self.labels is not None:
                     self.labels = self.labels[indices_test]
             else:
                 raise ValueError(f"Unrecognized mode: {self.mode}")
-        assert not np.any(pd.isnull(self.data_raw))
+        assert not np.any(pd.isnull(self.adata))
 
-        self.features_names = self.data_raw.var_names
-        self.sample_names = self.data_raw.obs_names
-        self.data = torch.from_numpy(self.data_raw.X).type(torch.FloatTensor)
-        self.data_counts = torch.from_numpy(self.data_raw.raw.X).type(torch.FloatTensor)
+        self.features_names = self.adata.var_names
+        self.sample_names = self.adata.obs_names
+        self.data = torch.from_numpy(self.adata.X).type(torch.FloatTensor)
+        self.data_counts = torch.from_numpy(self.adata.raw.X).type(torch.FloatTensor)
         self.size_factors = torch.from_numpy(
-            self.data_raw.obs.size_factors.values
+            self.adata.obs.size_factors.values
         ).type(torch.FloatTensor)
         self.size_norm_counts = self.get_normalized_counts()
         if self.labels is not None:
             self.labels = torch.from_numpy(self.labels).type(torch.FloatTensor)
             assert len(self.labels) == len(
-                self.data_raw
-            ), f"Got mismatched sizes {len(self.labels)} {len(self.data_raw)}"
+                self.adata
+            ), f"Got mismatched sizes {len(self.labels)} {len(self.adata)}"
 
     def get_normalized_counts(self):
         """Return table of normalized counts w/ size factor adjustment and no other normalization"""
-        raw_counts = self.data_raw.raw.X
+        raw_counts = self.adata.raw.X
         raw_counts_anndata = AnnData(
-            raw_counts, obs=self.data_raw.obs, var=self.data_raw.var
+            raw_counts, obs=self.adata.obs, var=self.adata.var
         )
         sc.pp.normalize_total(raw_counts_anndata, inplace=True)
         return raw_counts_anndata

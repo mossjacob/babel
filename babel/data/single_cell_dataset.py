@@ -39,56 +39,40 @@ class SingleCellDataset(Dataset):
     """
 
     def __init__(
-        self,
-        fname: Union[str, List[str]],
-        reader: Callable = sc_read_mtx,
-        raw_adata: Union[AnnData, None] = None,  # Should be raw data
-        normalize_count_table=True,
-        transpose: bool = True,
-        mode: str = "all",
-        data_split_by_cluster: str = "leiden",  # Specify as leiden
-        valid_cluster_id: int = 0,  # Only used if data_split_by_cluster is on
-        test_cluster_id: int = 1,
-        data_split_by_cluster_log: bool = True,
-        predefined_split=None,  # of type SingleCellDataset
-        cell_info: pd.DataFrame = None,
-        gene_info: pd.DataFrame = None,
-        selfsupervise: bool = True,
-        binarize: bool = False,
-        filt_cell_min_counts=None,  # All of these are off by default
-        filt_cell_max_counts=None,
-        filt_cell_min_genes=None,
-        filt_cell_max_genes=None,
-        filt_gene_min_counts=None,
-        filt_gene_max_counts=None,
-        filt_gene_min_cells=None,
-        filt_gene_max_cells=None,
-        pool_genomic_interval: Union[int, List[str]] = 0,
-        calc_size_factors: bool = True,
-        normalize: bool = True,
-        log_trans: bool = True,
-        clip: float = 0,
-        sort_by_pos: bool = False,
-        split_by_chrom: bool = False,
-        concat_outputs: bool = False,  # Instead of outputting a list of tensors, concat
-        autosomes_only: bool = False,
-        # high_confidence_clustering_genes: List[str] = [],  # used to build clustering
-        x_dropout: bool = False,
-        y_mode: str = "size_norm",
-        sample_y: bool = False,
-        return_sf: bool = True,
-        return_pbulk: bool = False,
-        filter_features: dict = {},
-        filter_samples: dict = {},
-        transforms: List[Callable] = [],
-        gtf_file: str = MM10_GTF,  # GTF file mapping genes to chromosomes, unused for ATAC
-        cluster_res: float = 2.0,
-        cache_prefix: str = "",
+            self,
+            adata: Union[AnnData, None],  # Should be raw data
+            mode: str = "all",
+            data_split_by_cluster: str = "leiden",  # Specify as leiden
+            valid_cluster_id: int = 0,  # Only used if data_split_by_cluster is on
+            test_cluster_id: int = 1,
+            data_split_by_cluster_log: bool = True,
+            predefined_split=None,  # of type SingleCellDataset
+            selfsupervise: bool = True,
+            pool_genomic_interval: Union[int, List[str]] = 0,
+            clip: float = 0,
+            sort_by_pos: bool = False,
+            split_by_chrom: bool = False,
+            concat_outputs: bool = False,  # Instead of outputting a list of tensors, concat
+            autosomes_only: bool = False,
+            # high_confidence_clustering_genes: List[str] = [],  # used to build clustering
+            x_dropout: bool = False,
+            y_mode: str = "size_norm",
+            sample_y: bool = False,
+            return_sf: bool = True,
+            return_pbulk: bool = False,
+            filter_features: dict = {},
+            filter_samples: dict = {},
+            transforms: List[Callable] = [],
+            gtf_file: str = MM10_GTF,  # GTF file mapping genes to chromosomes, unused for ATAC
+            cluster_res: float = 2.0,
+            cache_prefix: str = "",
+            **kwargs
     ):
         """
         Clipping is performed AFTER normalization
-        Binarize will turn all counts into binary 0/1 indicators before running normalization code
         If pool_genomic_interval is -1, then we pool based on proximity to gene
+        Parameters:
+            adata: AnnData object containing counts normalised by size factors and logged.
         """
         assert mode in [
             "all",
@@ -101,15 +85,11 @@ class SingleCellDataset(Dataset):
             "log_raw_count",
             "x",
         ], f"Unrecognized mode for y output: {y_mode}"
-        if y_mode == "size_norm":
-            assert calc_size_factors
         self.mode = mode
         self.selfsupervise = selfsupervise
         self.x_dropout = x_dropout
         self.y_mode = y_mode
         self.sample_y = sample_y
-        self.binarize = binarize
-        self.calc_size_factors = calc_size_factors
         self.return_sf = return_sf
         self.return_pbulk = return_pbulk
         self.transforms = transforms
@@ -124,13 +104,10 @@ class SingleCellDataset(Dataset):
         self.test_cluster_id = test_cluster_id
         self.data_split_by_cluster_log = data_split_by_cluster_log
 
-        if raw_adata is not None:
-            logging.info(
-                f"Got AnnData object {str(raw_adata)}, ignoring reader/fname args"
-            )
-            self.data_raw = raw_adata
-        else:
-            self.data_raw = reader(fname)
+        logging.info(
+            f"Got AnnData object {str(adata)}"
+        )
+        self.data_raw = adata
         assert isinstance(
             self.data_raw, AnnData
         ), f"Expected AnnData but got {type(self.data_raw)}"
@@ -139,43 +116,12 @@ class SingleCellDataset(Dataset):
                 self.data_raw.X
             )  # Convert to sparse matrix
 
-        if transpose:
-            self.data_raw = self.data_raw.T
-
         # Filter out undesirable var/obs
-        # self.__filter_obs_metadata(filter_samples=filter_samples)
-        # self.__filter_var_metadata(filter_features=filter_features)
         self.data_raw = adata_utils.filter_adata(
             self.data_raw, filt_cells=filter_samples, filt_var=filter_features
         )
 
         # Attach obs/var annotations
-        if cell_info is not None:
-            assert isinstance(cell_info, pd.DataFrame)
-            if self.data_raw.obs is not None and not self.data_raw.obs.empty:
-                self.data_raw.obs = self.data_raw.obs.join(
-                    cell_info, how="left", sort=False
-                )
-            else:
-                self.data_raw.obs = cell_info
-            assert (
-                self.data_raw.shape[0] == self.data_raw.obs.shape[0]
-            ), f"Got discordant shapes for data and obs: {self.data_raw.shape} {self.data_raw.obs.shape}"
-
-        if gene_info is not None:
-            assert isinstance(gene_info, pd.DataFrame)
-            if (
-                self.data_raw.var is not None and not self.data_raw.var.empty
-            ):  # Is not None and is not empty
-                self.data_raw.var = self.data_raw.var.join(
-                    gene_info, how="left", sort=False
-                )
-            else:
-                self.data_raw.var = gene_info
-            assert (
-                self.data_raw.shape[1] == self.data_raw.var.shape[0]
-            ), f"Got discordant shapes for data and var: {self.data_raw.shape} {self.data_raw.var.shape}"
-
         if sort_by_pos:
             genes_reordered, chroms_reordered = reorder_genes_by_pos(
                 self.data_raw.var_names, gtf_file=gtf_file, return_chrom=True
@@ -201,30 +147,7 @@ class SingleCellDataset(Dataset):
             self.__annotate_chroms(gtf_file)
 
         # Preprocess the data now that we're done filtering
-        if self.binarize:
-            # If we are binarizing data we probably don't care about raw counts
-            # self.data_raw.raw = self.data_raw.copy()  # Store original counts
-            self.data_raw.X[self.data_raw.X.nonzero()] = 1  # .X here is a csr matrix
-
         adata_utils.annotate_basic_adata_metrics(self.data_raw)
-        adata_utils.filter_adata_cells_and_genes(
-            self.data_raw,
-            filter_cell_min_counts=filt_cell_min_counts,
-            filter_cell_max_counts=filt_cell_max_counts,
-            filter_cell_min_genes=filt_cell_min_genes,
-            filter_cell_max_genes=filt_cell_max_genes,
-            filter_gene_min_counts=filt_gene_min_counts,
-            filter_gene_max_counts=filt_gene_max_counts,
-            filter_gene_min_cells=filt_gene_min_cells,
-            filter_gene_max_cells=filt_gene_max_cells,
-        )
-        if normalize_count_table:
-            self.data_raw = adata_utils.normalize_count_table(  # Normalizes in place
-                self.data_raw,
-                size_factors=calc_size_factors,
-                normalize=normalize,
-                log_trans=log_trans,
-            )
         self._size_norm_log_counts = AnnData(
             scipy.sparse.csr_matrix(self.data_raw.X),
             obs=pd.DataFrame(index=self.data_raw.obs_names),

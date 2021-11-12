@@ -258,17 +258,7 @@ def filter_adata(
     return adata
 
 
-def filter_adata_cells_and_genes(
-    x: AnnData,
-    filter_cell_min_counts=None,
-    filter_cell_max_counts=None,
-    filter_cell_min_genes=None,
-    filter_cell_max_genes=None,
-    filter_gene_min_counts=None,
-    filter_gene_max_counts=None,
-    filter_gene_min_cells=None,
-    filter_gene_max_cells=None,
-) -> None:
+def filter_adata_cells_and_genes(x: AnnData, filter_config) -> None:
     """Filter the count table in place given the parameters based on actual data"""
     args = locals()
     filtering_cells = any(
@@ -293,35 +283,35 @@ def filter_adata_cells_and_genes(
     # Perform filtering on cells
     if filtering_cells:
         logging.info(f"Filtering {x.n_obs} cells")
-    if filter_cell_min_counts is not None:
+    if filter_config.cell_min_counts is not None:
         sc.pp.filter_cells(
             x,
             min_counts=ensure_count(
-                filter_cell_min_counts, max_value=np.max(x.obs["n_counts"])
+                filter_config.cell_min_counts, max_value=np.max(x.obs["n_counts"])
             ),
         )
         logging.info(f"Remaining cells after min count: {x.n_obs}")
-    if filter_cell_max_counts is not None:
+    if filter_config.cell_max_counts is not None:
         sc.pp.filter_cells(
             x,
             max_counts=ensure_count(
-                filter_cell_max_counts, max_value=np.max(x.obs["n_counts"])
+                filter_config.cell_max_counts, max_value=np.max(x.obs["n_counts"])
             ),
         )
         logging.info(f"Remaining cells after max count: {x.n_obs}")
-    if filter_cell_min_genes is not None:
+    if filter_config.cell_min_genes is not None:
         sc.pp.filter_cells(
             x,
             min_genes=ensure_count(
-                filter_cell_min_genes, max_value=np.max(x.obs["n_genes"])
+                filter_config.cell_min_genes, max_value=np.max(x.obs["n_genes"])
             ),
         )
         logging.info(f"Remaining cells after min genes: {x.n_obs}")
-    if filter_cell_max_genes is not None:
+    if filter_config.cell_max_genes is not None:
         sc.pp.filter_cells(
             x,
             max_genes=ensure_count(
-                filter_cell_max_genes, max_value=np.max(x.obs["n_genes"])
+                filter_config.cell_max_genes, max_value=np.max(x.obs["n_genes"])
             ),
         )
         logging.info(f"Remaining cells after max genes: {x.n_obs}")
@@ -329,35 +319,35 @@ def filter_adata_cells_and_genes(
     # Perform filtering on genes
     if filtering_genes:
         logging.info(f"Filtering {x.n_vars} vars")
-    if filter_gene_min_counts is not None:
+    if filter_config.gene_min_counts is not None:
         sc.pp.filter_genes(
             x,
             min_counts=ensure_count(
-                filter_gene_min_counts, max_value=np.max(x.var["n_counts"])
+                filter_config.gene_min_counts, max_value=np.max(x.var["n_counts"])
             ),
         )
         logging.info(f"Remaining vars after min count: {x.n_vars}")
-    if filter_gene_max_counts is not None:
+    if filter_config.gene_max_counts is not None:
         sc.pp.filter_genes(
             x,
             max_counts=ensure_count(
-                filter_gene_max_counts, max_value=np.max(x.var["n_counts"])
+                filter_config.gene_max_counts, max_value=np.max(x.var["n_counts"])
             ),
         )
         logging.info(f"Remaining vars after max count: {x.n_vars}")
-    if filter_gene_min_cells is not None:
+    if filter_config.gene_min_cells is not None:
         sc.pp.filter_genes(
             x,
             min_cells=ensure_count(
-                filter_gene_min_cells, max_value=np.max(x.var["n_cells"])
+                filter_config.gene_min_cells, max_value=np.max(x.var["n_cells"])
             ),
         )
         logging.info(f"Remaining vars after min cells: {x.n_vars}")
-    if filter_gene_max_cells is not None:
+    if filter_config.gene_max_cells is not None:
         sc.pp.filter_genes(
             x,
             max_cells=ensure_count(
-                filter_gene_max_cells, max_value=np.max(x.var["n_cells"])
+                filter_config.gene_max_cells, max_value=np.max(x.var["n_cells"])
             ),
         )
         logging.info(f"Remaining vars after max cells: {x.n_vars}")

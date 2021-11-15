@@ -71,12 +71,6 @@ class SingleCellDataset(Dataset):
             cache_prefix: Path = None,
             **kwargs
     ):
-        """
-        Clipping is performed AFTER normalization
-        If pool_genomic_interval is -1, then we pool based on proximity to gene
-        Parameters:
-            adata: AnnData object containing counts normalised by size factors and logged.
-        """
         assert mode in [
             "all",
             "skip",
@@ -125,7 +119,7 @@ class SingleCellDataset(Dataset):
 
         # Attach obs/var annotations
         if sort_by_pos:
-            fname = f'{self.mode}_genes_reordered.npy'
+            fname = f'{self.y_mode}_genes_reordered.npy'
             if cache_prefix and (self.cache_prefix / fname).exists():
                 genes_reordered = np.load(self.cache_prefix / fname)
             else:
@@ -246,18 +240,18 @@ class SingleCellDataset(Dataset):
         # Perform file backing if necessary
         self.data_raw_cache_fname = ""
         if self.cache_prefix is not None:
-            self.data_raw_cache_fname = self.cache_prefix / f'{self.mode}.adata.h5ad'
+            self.data_raw_cache_fname = self.cache_prefix / f'{self.y_mode}.adata.h5ad'
             logging.info(f"Setting cache at {self.data_raw_cache_fname}")
             self.adata.filename = self.data_raw_cache_fname
             if hasattr(self, "_size_norm_counts"):
-                size_norm_cache_name = self.cache_prefix / f'{self.mode}.size_norm_counts.h5ad'
+                size_norm_cache_name = self.cache_prefix / f'{self.y_mode}.size_norm_counts.h5ad'
                 logging.info(
                     f"Setting size norm counts cache at {size_norm_cache_name}"
                 )
                 self._size_norm_counts.filename = size_norm_cache_name
             if hasattr(self, "_size_norm_log_counts"):
                 size_norm_log_cache_name = (
-                    self.cache_prefix / f'{self.mode}.size_norm_log_counts.h5ad'
+                    self.cache_prefix / f'{self.y_mode}.size_norm_log_counts.h5ad'
                 )
                 logging.info(
                     f"Setting size log norm counts cache at {size_norm_log_cache_name}"

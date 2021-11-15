@@ -33,7 +33,6 @@ from babel import utils
 DATA_DIR = Path(os.path.dirname(__file__)).parent.parent / 'data'
 assert os.path.isdir(DATA_DIR)
 SNARESEQ_DATA_DIR = DATA_DIR / 'snareseq_GSE126074'
-print(SNARESEQ_DATA_DIR)
 assert os.path.isdir(SNARESEQ_DATA_DIR)
 MM9_GTF = DATA_DIR / "Mus_musculus.NCBIM37.67.gtf.gz"
 assert os.path.isfile(MM9_GTF)

@@ -3,14 +3,11 @@ Utility functions for anndata objects
 """
 
 import os
-import sys
 import logging
 import multiprocessing
-import functools
 import collections
 import itertools
 import re
-import tqdm
 import numpy as np
 import pandas as pd
 import scanpy as sc

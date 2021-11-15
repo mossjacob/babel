@@ -8,6 +8,7 @@ import functools
 import copy
 import collections
 
+from pathlib import Path
 from typing import *
 from torch.utils.data import Dataset
 from anndata import AnnData
@@ -35,17 +36,21 @@ class SingleCellDataset(Dataset):
     Given a sparse matrix file, load in dataset
 
     can be things like sklearn MaxAbsScaler().fit_transform
+    Parameters:
+        valid_cluster_id: Only used if data_split_by_cluster is on, default 0
+        predefined_split: of type SingleCellDataset
+
     """
 
     def __init__(
             self,
-            adata: Union[AnnData, None],  # Should be raw data
+            adata: Union[AnnData, None],  # Should be size-factor normalised and logged counts
             mode: str = "all",
-            data_split_by_cluster: str = "leiden",  # Specify as leiden
-            valid_cluster_id: int = 0,  # Only used if data_split_by_cluster is on
+            data_split_by_cluster: str = "leiden",
+            valid_cluster_id: int = 0,
             test_cluster_id: int = 1,
             data_split_by_cluster_log: bool = True,
-            predefined_split=None,  # of type SingleCellDataset
+            predefined_split=None,
             selfsupervise: bool = True,
             pool_genomic_interval: Union[int, List[str]] = 0,
             clip: float = 0,
@@ -63,7 +68,7 @@ class SingleCellDataset(Dataset):
             filter_samples: dict = {},
             gtf_file: str = MM10_GTF,  # GTF file mapping genes to chromosomes, unused for ATAC
             cluster_res: float = 2.0,
-            cache_prefix: str = "",
+            cache_prefix: Path = None,
             **kwargs
     ):
         """
@@ -120,9 +125,15 @@ class SingleCellDataset(Dataset):
 
         # Attach obs/var annotations
         if sort_by_pos:
-            genes_reordered, chroms_reordered = reorder_genes_by_pos(
-                self.adata.var_names, gtf_file=gtf_file, return_chrom=True
-            )
+            fname = 'genes_reordered.npy'
+            if cache_prefix and (self.cache_prefix / fname).exists():
+                genes_reordered = np.load(self.cache_prefix / fname)
+            else:
+                genes_reordered, chroms_reordered = reorder_genes_by_pos(
+                    self.adata.var_names, gtf_file=gtf_file, return_chrom=True
+                )
+            if cache_prefix:
+                np.save(self.cache_prefix / fname, genes_reordered)
             self.adata = self.adata[:, genes_reordered]
 
         self.__annotate_chroms(gtf_file)
@@ -234,19 +245,19 @@ class SingleCellDataset(Dataset):
 
         # Perform file backing if necessary
         self.data_raw_cache_fname = ""
-        if self.cache_prefix:
-            self.data_raw_cache_fname = self.cache_prefix + ".adata.h5ad"
+        if self.cache_prefix is not None:
+            self.data_raw_cache_fname = self.cache_prefix / '.adata.h5ad'
             logging.info(f"Setting cache at {self.data_raw_cache_fname}")
             self.adata.filename = self.data_raw_cache_fname
             if hasattr(self, "_size_norm_counts"):
-                size_norm_cache_name = self.cache_prefix + ".size_norm_counts.h5ad"
+                size_norm_cache_name = self.cache_prefix / ".size_norm_counts.h5ad"
                 logging.info(
                     f"Setting size norm counts cache at {size_norm_cache_name}"
                 )
                 self._size_norm_counts.filename = size_norm_cache_name
             if hasattr(self, "_size_norm_log_counts"):
                 size_norm_log_cache_name = (
-                    self.cache_prefix + ".size_norm_log_counts.h5ad"
+                    self.cache_prefix / ".size_norm_log_counts.h5ad"
                 )
                 logging.info(
                     f"Setting size log norm counts cache at {size_norm_log_cache_name}"

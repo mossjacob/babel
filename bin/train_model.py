@@ -337,7 +337,7 @@ def main():
     atac_data_kwargs["cluster_res"] = 0  # Do not bother clustering ATAC data
     if atac_data_kwargs['binarize']:
         # If we are binarizing data we probably don't care about raw counts
-        # self.data_raw.raw = self.data_raw.copy()  # Store original counts
+        # self.adata.raw = self.adata.copy()  # Store original counts
         adata_atac.X[adata_atac.X.nonzero()] = 1  # .X here is a csr matrix
 
     sc_atac_dataset = SingleCellDataset(
@@ -384,10 +384,10 @@ def main():
             os.makedirs(outdir_name)
         assert os.path.isdir(outdir_name)
         with open(os.path.join(outdir_name, "rna_genes.txt"), "w") as sink:
-            for gene in sc_rna_dataset.data_raw.var_names:
+            for gene in sc_rna_dataset.adata.var_names:
                 sink.write(gene + "\n")
         with open(os.path.join(outdir_name, "atac_bins.txt"), "w") as sink:
-            for atac_bin in sc_atac_dataset.data_raw.var_names:
+            for atac_bin in sc_atac_dataset.adata.var_names:
                 sink.write(atac_bin + "\n")
 
         # Write dataset
@@ -398,26 +398,26 @@ def main():
         sc_rna_dataset.size_norm_log_counts.write_h5ad(
             os.path.join(outdir_name, "full_rna_log.h5ad")
         )
-        sc_atac_dataset.data_raw.write_h5ad(os.path.join(outdir_name, "full_atac.h5ad"))
+        sc_atac_dataset.adata.write_h5ad(os.path.join(outdir_name, "full_atac.h5ad"))
         ### Train
         sc_rna_train_dataset.size_norm_counts.write_h5ad(
             os.path.join(outdir_name, "train_rna.h5ad")
         )
-        sc_atac_train_dataset.data_raw.write_h5ad(
+        sc_atac_train_dataset.adata.write_h5ad(
             os.path.join(outdir_name, "train_atac.h5ad")
         )
         ### Valid
         sc_rna_valid_dataset.size_norm_counts.write_h5ad(
             os.path.join(outdir_name, "valid_rna.h5ad")
         )
-        sc_atac_valid_dataset.data_raw.write_h5ad(
+        sc_atac_valid_dataset.adata.write_h5ad(
             os.path.join(outdir_name, "valid_atac.h5ad")
         )
         ### Test
         sc_rna_test_dataset.size_norm_counts.write_h5ad(
             os.path.join(outdir_name, "truth_rna.h5ad")
         )
-        sc_atac_test_dataset.data_raw.write_h5ad(
+        sc_atac_test_dataset.adata.write_h5ad(
             os.path.join(outdir_name, "truth_atac.h5ad")
         )
 
@@ -430,7 +430,7 @@ def main():
         spliced_net = skorch_wrappers.SplicedAutoEncoderSkorchNet(
             module=model_class,
             module__hidden_dim=h_dim,  # Based on hyperparam tuning
-            module__input_dim1=sc_rna_dataset.data_raw.shape[1],
+            module__input_dim1=sc_rna_dataset.adata.shape[1],
             module__input_dim2=sc_atac_dataset.get_per_chrom_feature_count(),
             module__final_activations1=[
                 activations.Exp(),
@@ -481,8 +481,8 @@ def main():
         sc_rna_test_preds = spliced_net.translate_1_to_1(sc_dual_test_dataset)
         sc_rna_test_preds_anndata = sc.AnnData(
             sc_rna_test_preds,
-            var=sc_rna_test_dataset.data_raw.var,
-            obs=sc_rna_test_dataset.data_raw.obs,
+            var=sc_rna_test_dataset.adata.var,
+            obs=sc_rna_test_dataset.adata.obs,
         )
         sc_rna_test_preds_anndata.write_h5ad(
             os.path.join(outdir_name, "rna_rna_test_preds.h5ad")
@@ -502,14 +502,14 @@ def main():
         sc_atac_test_preds = spliced_net.translate_2_to_2(sc_dual_test_dataset)
         sc_atac_test_preds_anndata = sc.AnnData(
             sc_atac_test_preds,
-            var=sc_atac_test_dataset.data_raw.var,
-            obs=sc_atac_test_dataset.data_raw.obs,
+            var=sc_atac_test_dataset.adata.var,
+            obs=sc_atac_test_dataset.adata.obs,
         )
         sc_atac_test_preds_anndata.write_h5ad(
             os.path.join(outdir_name, "atac_atac_test_preds.h5ad")
         )
         fig = plot_utils.plot_auroc(
-            sc_atac_test_dataset.data_raw.X,
+            sc_atac_test_dataset.adata.X,
             sc_atac_test_preds,
             title_prefix="ATAC > ATAC",
             fname=os.path.join(outdir_name, f"atac_atac_auroc.{args.ext}"),
@@ -520,8 +520,8 @@ def main():
         sc_atac_rna_test_preds = spliced_net.translate_2_to_1(sc_dual_test_dataset)
         sc_atac_rna_test_preds_anndata = sc.AnnData(
             sc_atac_rna_test_preds,
-            var=sc_rna_test_dataset.data_raw.var,
-            obs=sc_rna_test_dataset.data_raw.obs,
+            var=sc_rna_test_dataset.adata.var,
+            obs=sc_rna_test_dataset.adata.obs,
         )
         sc_atac_rna_test_preds_anndata.write_h5ad(
             os.path.join(outdir_name, "atac_rna_test_preds.h5ad")
@@ -541,14 +541,14 @@ def main():
         sc_rna_atac_test_preds = spliced_net.translate_1_to_2(sc_dual_test_dataset)
         sc_rna_atac_test_preds_anndata = sc.AnnData(
             sc_rna_atac_test_preds,
-            var=sc_atac_test_dataset.data_raw.var,
-            obs=sc_atac_test_dataset.data_raw.obs,
+            var=sc_atac_test_dataset.adata.var,
+            obs=sc_atac_test_dataset.adata.obs,
         )
         sc_rna_atac_test_preds_anndata.write_h5ad(
             os.path.join(outdir_name, "rna_atac_test_preds.h5ad")
         )
         fig = plot_utils.plot_auroc(
-            sc_atac_test_dataset.data_raw.X,
+            sc_atac_test_dataset.adata.X,
             sc_rna_atac_test_preds,
             title_prefix="RNA > ATAC",
             fname=os.path.join(outdir_name, f"rna_atac_auroc.{args.ext}"),

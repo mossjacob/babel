@@ -239,24 +239,24 @@ class SingleCellDataset(Dataset):
 
         # Perform file backing if necessary
         self.data_raw_cache_fname = ""
-        if self.cache_prefix is not None:
-            self.data_raw_cache_fname = self.cache_prefix / f'{self.y_mode}.adata.h5ad'
-            logging.info(f"Setting cache at {self.data_raw_cache_fname}")
-            self.adata.filename = self.data_raw_cache_fname
-            if hasattr(self, "_size_norm_counts"):
-                size_norm_cache_name = self.cache_prefix / f'{self.y_mode}.size_norm_counts.h5ad'
-                logging.info(
-                    f"Setting size norm counts cache at {size_norm_cache_name}"
-                )
-                self._size_norm_counts.filename = size_norm_cache_name
-            if hasattr(self, "_size_norm_log_counts"):
-                size_norm_log_cache_name = (
-                    self.cache_prefix / f'{self.y_mode}.size_norm_log_counts.h5ad'
-                )
-                logging.info(
-                    f"Setting size log norm counts cache at {size_norm_log_cache_name}"
-                )
-                self._size_norm_log_counts.filename = size_norm_log_cache_name
+        # if self.cache_prefix is not None:
+        #     self.data_raw_cache_fname = self.cache_prefix / f'{self.y_mode}.adata.h5ad'
+        #     logging.info(f"Setting cache at {self.data_raw_cache_fname}")
+        #     self.adata.filename = self.data_raw_cache_fname
+        #     if hasattr(self, "_size_norm_counts"):
+        #         size_norm_cache_name = self.cache_prefix / f'{self.y_mode}.size_norm_counts.h5ad'
+        #         logging.info(
+        #             f"Setting size norm counts cache at {size_norm_cache_name}"
+        #         )
+        #         self._size_norm_counts.filename = size_norm_cache_name
+        #     if hasattr(self, "_size_norm_log_counts"):
+        #         size_norm_log_cache_name = (
+        #             self.cache_prefix / f'{self.y_mode}.size_norm_log_counts.h5ad'
+        #         )
+        #         logging.info(
+        #             f"Setting size log norm counts cache at {size_norm_log_cache_name}"
+        #         )
+        #         self._size_norm_log_counts.filename = size_norm_log_cache_name
 
     def __annotate_chroms(self, gtf_file: str = "") -> None:
         """Annotates chromosome information on the var field, without the chr prefix"""

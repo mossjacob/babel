@@ -22,8 +22,8 @@ def obs_names_from_dataset(dset: Dataset) -> Union[List[str], None]:
         return dset.obs_names
     elif isinstance(dset, SingleCellDatasetSplit):
         return list(dset.obs_names)
-    elif isinstance(dset.data_raw, AnnData):
-        return list(dset.data_raw.obs_names)
+    elif isinstance(dset.adata, AnnData):
+        return list(dset.adata.obs_names)
     return None
 
 
@@ -69,8 +69,8 @@ class SplicedDataset(Dataset):
 
     def get_feature_labels(self) -> List[str]:
         """Return the names of the combined features"""
-        return list(self.dataset_x.data_raw.var_names) + list(
-            self.dataset_y.data_raw.var_names
+        return list(self.dataset_x.adata.var_names) + list(
+            self.dataset_y.adata.var_names
         )
 
     def get_obs_labels(self) -> List[str]:

@@ -34,7 +34,6 @@ class SingleCellDataset(Dataset):
     """
     Given a sparse matrix file, load in dataset
 
-    If transforms is given, it is applied after all the pre-baked transformations. These
     can be things like sklearn MaxAbsScaler().fit_transform
     """
 
@@ -62,7 +61,6 @@ class SingleCellDataset(Dataset):
             return_pbulk: bool = False,
             filter_features: dict = {},
             filter_samples: dict = {},
-            transforms: List[Callable] = [],
             gtf_file: str = MM10_GTF,  # GTF file mapping genes to chromosomes, unused for ATAC
             cluster_res: float = 2.0,
             cache_prefix: str = "",
@@ -92,7 +90,6 @@ class SingleCellDataset(Dataset):
         self.sample_y = sample_y
         self.return_sf = return_sf
         self.return_pbulk = return_pbulk
-        self.transforms = transforms
         self.cache_prefix = cache_prefix
         self.sort_by_pos = sort_by_pos
         self.split_by_chrom = split_by_chrom
@@ -186,11 +183,6 @@ class SingleCellDataset(Dataset):
                     clip_low < clip_high
                 ), f"Got discordant values for clipping ends: {clip_low} {clip_high}"
                 self.adata.X = np.clip(self.adata.X, clip_low, clip_high)
-
-        # Apply any final transformations
-        if self.transforms:
-            for trans in self.transforms:
-                self.adata.X = trans(self.adata.X)
 
         # Make sure the data is a sparse matrix
         if not isinstance(self.adata.X, scipy.sparse.csr_matrix):

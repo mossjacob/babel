@@ -50,7 +50,7 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
     rna_dataset.size_norm_log_counts.write_h5ad(
         os.path.join(save_dir, "full_rna_log.h5ad")
     )
-    atac_dataset.data_raw.write_h5ad(os.path.join(save_dir, "full_atac.h5ad"))
+    atac_dataset.adata.write_h5ad(os.path.join(save_dir, "full_atac.h5ad"))
 
     dual_subsets = list()
     for subset in ['train', 'valid', 'test']:
@@ -67,15 +67,15 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
         rna_subset.size_norm_counts.write_h5ad(
             os.path.join(save_dir, f'{subset}_rna.h5ad')
         )
-        atac_subset.data_raw.write_h5ad(
+        atac_subset.adata.write_h5ad(
             os.path.join(save_dir, f'{subset}_atac.h5ad')
         )
 
     with open(os.path.join(save_dir, "rna_genes.txt"), "w") as sink:
-        for gene in rna_dataset.data_raw.var_names:
+        for gene in rna_dataset.adata.var_names:
             sink.write(gene + "\n")
     with open(os.path.join(save_dir, "atac_bins.txt"), "w") as sink:
-        for atac_bin in atac_dataset.data_raw.var_names:
+        for atac_bin in atac_dataset.adata.var_names:
             sink.write(atac_bin + "\n")
 
     return dual_full_dataset, dual_subsets

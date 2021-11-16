@@ -17,7 +17,6 @@ from cached_property import cached_property
 from babel import utils, plot_utils
 from . import processing
 from .loaders import (
-    sc_read_mtx,
     MM10_GTF,
     get_indices_to_combine,
     get_indices_to_form_target_intervals,
@@ -54,19 +53,15 @@ class SingleCellDataset(Dataset):
             predefined_split=None,
             selfsupervise: bool = True,
             pool_genomic_interval: Union[int, List[str]] = 0,
-            clip: float = 0,
             sort_by_pos: bool = False,
             split_by_chrom: bool = False,
             concat_outputs: bool = False,  # Instead of outputting a list of tensors, concat
             autosomes_only: bool = False,
-            # high_confidence_clustering_genes: List[str] = [],  # used to build clustering
             x_dropout: bool = False,
             y_mode: str = "size_norm",
             sample_y: bool = False,
             return_sf: bool = True,
             return_pbulk: bool = False,
-            filter_features: dict = {},
-            filter_samples: dict = {},
             gtf_file: str = MM10_GTF,  # GTF file mapping genes to chromosomes, unused for ATAC
             cluster_res: float = 2.0,
             cache_prefix: Path = None,
@@ -113,11 +108,6 @@ class SingleCellDataset(Dataset):
                 self.adata.X
             )  # Convert to sparse matrix
 
-        # Filter out undesirable var/obs
-        self.adata = adata_utils.filter_adata(
-            self.adata, filt_cells=filter_samples, filt_var=filter_features
-        )
-
         # Attach obs/var annotations
         if sort_by_pos:
             fname = f'{self.y_mode}_genes_reordered.npy'
@@ -150,7 +140,6 @@ class SingleCellDataset(Dataset):
             self.__annotate_chroms(gtf_file)
 
         # Preprocess the data now that we're done filtering
-        adata_utils.annotate_basic_adata_metrics(self.adata)
         self._size_norm_log_counts = AnnData(
             scipy.sparse.csr_matrix(self.adata.X),
             obs=pd.DataFrame(index=self.adata.obs_names),
@@ -175,20 +164,6 @@ class SingleCellDataset(Dataset):
             leiden_resolution=self.cluster_res
         )
         self.adata.X = utils.ensure_arr(self.adata.X)
-
-        if clip > 0:
-            assert isinstance(clip, float) and 0.0 < clip < 50.0
-            logging.info(f"Clipping to {clip} percentile")
-            clip_low, clip_high = np.percentile(
-                self.adata.X.flatten(), [clip, 100.0 - clip]
-            )
-            if clip_low == clip_high == 0:
-                logging.warning("Skipping clipping, as clipping intervals are 0")
-            else:
-                assert (
-                    clip_low < clip_high
-                ), f"Got discordant values for clipping ends: {clip_low} {clip_high}"
-                self.adata.X = np.clip(self.adata.X, clip_low, clip_high)
 
         # Make sure the data is a sparse matrix
         if not isinstance(self.adata.X, scipy.sparse.csr_matrix):

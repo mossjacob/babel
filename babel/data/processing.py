@@ -43,12 +43,13 @@ class FilterConfig:
     gene_min_cells:  object = None
     gene_max_cells:  object = None
 
-def clip():
+
+def clip(adata, clip):
     if clip > 0:
         assert isinstance(clip, float) and 0.0 < clip < 50.0
         logging.info(f"Clipping to {clip} percentile")
         clip_low, clip_high = np.percentile(
-            self.adata.X.flatten(), [clip, 100.0 - clip]
+            adata.X.flatten(), [clip, 100.0 - clip]
         )
         if clip_low == clip_high == 0:
             logging.warning("Skipping clipping, as clipping intervals are 0")
@@ -56,7 +57,7 @@ def clip():
             assert (
                     clip_low < clip_high
             ), f"Got discordant values for clipping ends: {clip_low} {clip_high}"
-            self.adata.X = np.clip(self.adata.X, clip_low, clip_high)
+            adata.X = np.clip(adata.X, clip_low, clip_high)
 
 
 # def process_raw_counts(adata):

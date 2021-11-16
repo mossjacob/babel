@@ -40,14 +40,39 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
         assert os.path.isdir(save_dir)
 
     # if load:
+    adata_gex = sc_read_mtx(rna_data_kwargs['fname'])
+    adata_atac = sc_read_mtx(atac_data_kwargs['fname'])
+    if rna_data_kwargs['transpose']:
+        adata_gex = adata_gex.T
+    if atac_data_kwargs['transpose']:
+        adata_atac = adata_atac.T
+    # Filter and join gene and cell info
+    for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
+        join_gene_info(adata, data_kwargs['gene_info'])
+        join_cell_info(adata, data_kwargs['cell_info'])
+        annotate_basic_adata_metrics(adata)
+        filter_config = get_filter_config_from_kwargs(data_kwargs)
+        filter_adata_cells_and_genes(adata, filter_config)
+
+    # Normalize counts
+    adata_gex = normalize_count_table(  # Normalizes in place
+        adata_gex,
+        size_factors=rna_data_kwargs['calc_size_factors'],
+        normalize=rna_data_kwargs['normalize'],
+        log_trans=rna_data_kwargs['log_trans'],
+    )
+    for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
+        if 'clip' in data_kwargs:
+            clip(adata, data_kwargs['clip'])
 
     rna_dataset = SingleCellDataset(
+        adata_gex,
         valid_cluster_id=config.validcluster,
         test_cluster_id=config.testcluster,
         **rna_data_kwargs,
     )
     atac_dataset = SingleCellDataset(
-        predefined_split=rna_dataset, **atac_data_kwargs
+        adata_atac, predefined_split=rna_dataset, **atac_data_kwargs
     )
     dual_full_dataset = PairedDataset(
         rna_dataset, atac_dataset, flat_mode=True,

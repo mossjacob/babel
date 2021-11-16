@@ -29,6 +29,7 @@ from typing import *
 from anndata import AnnData
 
 from babel import utils
+from babel.data.processing import FilterConfig
 
 DATA_DIR = Path(os.path.dirname(__file__)).parent.parent / 'data'
 assert os.path.isdir(DATA_DIR)
@@ -167,6 +168,17 @@ TENX_PBMC_RNA_DATA_KWARGS = {
     "cluster_res": 1.5,
 }
 
+
+def get_filter_config_from_kwargs(data_kwargs):
+    def is_filter_kwarg(k):
+        return (
+                k.endswith('_genes') or
+                k.endswith('_counts') or
+                k.endswith('_cells')
+        )
+    filter_keys = list(filter(is_filter_kwarg, data_kwargs.keys()))
+    filter_vals = [data_kwargs[k] for k in filter_keys]
+    return FilterConfig(**dict(zip(map(lambda s: s[5:], filter_keys), filter_vals)))
 
 @functools.lru_cache(4)
 def sc_read_mtx(fname: str, dtype: str = "float32"):

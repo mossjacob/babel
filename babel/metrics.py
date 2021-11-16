@@ -14,8 +14,7 @@ from sklearn.metrics import (
 
 from anndata import AnnData
 
-from babel import adata_utils
-from babel.data import loaders
+from babel.data import loaders, processing
 
 GENERAL_CELLTYPES_MAPPING = {
     "CD4 T cells": [
@@ -235,8 +234,8 @@ def marker_gene_overlap(
     major_overlap = np.where(cont_mat_proportion.max(axis=1) >= 0.5)
 
     # Compute marker genes for both anndata
-    adata_utils.find_marker_genes(preds_anndata, n_genes=n_genes)
-    adata_utils.find_marker_genes(truth_anndata, n_genes=n_genes)
+    processing.find_marker_genes(preds_anndata, n_genes=n_genes)
+    processing.find_marker_genes(truth_anndata, n_genes=n_genes)
 
     retval = {}
     for i in major_overlap[0]:

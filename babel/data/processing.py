@@ -29,6 +29,66 @@ os.environ["NUMEXPR_MAX_THREADS"] = "32"
 logging.basicConfig(level=logging.INFO)
 
 
+from dataclasses import dataclass
+
+
+@dataclass
+class FilterConfig:
+    cell_min_counts: object = None  # All of these are off by default
+    cell_max_counts: object = None
+    cell_min_genes:  object = None
+    cell_max_genes:  object = None
+    gene_min_counts: object = None
+    gene_max_counts: object = None
+    gene_min_cells:  object = None
+    gene_max_cells:  object = None
+
+def clip():
+    if clip > 0:
+        assert isinstance(clip, float) and 0.0 < clip < 50.0
+        logging.info(f"Clipping to {clip} percentile")
+        clip_low, clip_high = np.percentile(
+            self.adata.X.flatten(), [clip, 100.0 - clip]
+        )
+        if clip_low == clip_high == 0:
+            logging.warning("Skipping clipping, as clipping intervals are 0")
+        else:
+            assert (
+                    clip_low < clip_high
+            ), f"Got discordant values for clipping ends: {clip_low} {clip_high}"
+            self.adata.X = np.clip(self.adata.X, clip_low, clip_high)
+
+
+# def process_raw_counts(adata):
+#
+def join_cell_info(adata, cell_info):
+    assert isinstance(cell_info, pd.DataFrame)
+    if adata.obs is not None and not adata.obs.empty:
+        adata.obs = adata.obs.join(
+            cell_info, how="left", sort=False
+        )
+    else:
+        adata.obs = cell_info
+    assert (
+            adata.shape[0] == adata.obs.shape[0]
+    ), f"Got discordant shapes for data and obs: {adata.shape} {adata.obs.shape}"
+
+
+def join_gene_info(adata, gene_info):
+    assert isinstance(gene_info, pd.DataFrame)
+    if (
+            adata.var is not None and not adata.var.empty
+    ):  # Is not None and is not empty
+        adata.var = adata.var.join(
+            gene_info, how="left", sort=False
+        )
+    else:
+        adata.var = gene_info
+    assert (
+            adata.shape[1] == adata.var.shape[0]
+    ), f"Got discordant shapes for data and var: {adata.shape} {adata.var.shape}"
+
+
 def write_adata_as_10x_dir(
     x: AnnData, outdir: str, transpose: bool = True, mode: str = "ATAC"
 ) -> None:

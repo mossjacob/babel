@@ -18,11 +18,11 @@ import skorch
 
 from skorch.helper import predefined_split
 from babel import activations, loss_functions
-from babel import utils, adata_utils, model_utils, plot_utils
-from babel.data import loaders, SingleCellDatasetSplit, SingleCellDataset, PairedDataset
+from babel import utils, model_utils, plot_utils
+from babel.data import loaders, SingleCellDatasetSplit, SingleCellDataset, PairedDataset, processing
 from babel.models import skorch_wrappers, autoencoders
-from babel.data.processor import FilterConfig, join_cell_info, join_gene_info
-from babel.data.loaders import sc_read_mtx
+from babel.data.processing import join_cell_info, join_gene_info
+from babel.data.loaders import sc_read_mtx, get_filter_config_from_kwargs
 
 
 torch.backends.cudnn.deterministic = True  # For reproducibility
@@ -210,14 +210,14 @@ def main():
         atac_adatas = []
         for tissuetype in args.shareseq:
             shareseq_rna_adatas.append(
-                adata_utils.load_shareseq_data(
+                processing.load_shareseq_data(
                     tissuetype,
                     dirname="/data/wukevin/commonspace_data/GSE140203_SHAREseq",
                     mode="RNA",
                 )
             )
             atac_adatas.append(
-                adata_utils.load_shareseq_data(
+                processing.load_shareseq_data(
                     tissuetype,
                     dirname="/data/wukevin/commonspace_data/GSE140203_SHAREseq",
                     mode="ATAC",
@@ -292,23 +292,17 @@ def main():
     rna_data_kwargs["data_split_by_cluster_log"] = not args.linear
     rna_data_kwargs["data_split_by_cluster"] = args.clustermethod
 
+
     # Filter and join gene and cell info
-    def is_filter_kwarg(k):
-        return (
-                k.endswith('_genes') or
-                k.endswith('_counts') or
-                k.endswith('_cells')
-        )
     for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
-        filter_keys = list(filter(is_filter_kwarg, data_kwargs.keys()))
-        filter_vals = [data_kwargs[k] for k in filter_keys]
-        config = FilterConfig(dict(zip(map(lambda s: s[5:], filter_keys), filter_vals)))
-        adata_utils.filter_adata_cells_and_genes(adata, config)
+        processing.annotate_basic_adata_metrics(adata)
         join_gene_info(adata, data_kwargs['gene_info'])
         join_cell_info(adata, data_kwargs['cell_info'])
+        config = get_filter_config_from_kwargs(data_kwargs)
+        processing.filter_adata_cells_and_genes(adata, config)
 
     # Normalize counts
-    adata_gex = adata_utils.normalize_count_table(  # Normalizes in place
+    adata_gex = processing.normalize_count_table(  # Normalizes in place
         adata_gex,
         size_factors=rna_data_kwargs['calc_size_factors'],
         normalize=rna_data_kwargs['normalize'],

@@ -2,7 +2,6 @@
 Helper functions for plotting
 """
 
-import sys
 import os
 import logging
 import random
@@ -25,8 +24,8 @@ import scanpy as sc
 from sklearn.decomposition import PCA
 from anndata import AnnData
 
-from babel import utils, adata_utils
-
+from babel import utils
+from babel.data import processing
 
 # mpl.rcParams.update(mpl.rcParamsDefault)
 plt.style.use("seaborn-talk")
@@ -443,11 +442,11 @@ def plot_bulk_scatter(
     """
     if x_subset is not None:
         orig_size = x.n_obs
-        x = adata_utils.filter_adata(x, filt_cells=x_subset)
+        x = processing.filter_adata(x, filt_cells=x_subset)
         logging.info(f"Subsetted x from {orig_size} to {x.n_obs}")
     if y_subset is not None:
         orig_size = y.n_obs
-        y = adata_utils.filter_adata(y, filt_cells=y_subset)
+        y = processing.filter_adata(y, filt_cells=y_subset)
         logging.info(f"Subsetted y from {orig_size} to {y.n_obs}")
 
     # Make sure variables match

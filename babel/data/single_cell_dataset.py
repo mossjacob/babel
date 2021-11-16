@@ -14,7 +14,8 @@ from torch.utils.data import Dataset
 from anndata import AnnData
 from cached_property import cached_property
 
-from babel import utils, plot_utils, adata_utils
+from babel import utils, plot_utils
+from . import processing
 from .loaders import (
     sc_read_mtx,
     MM10_GTF,
@@ -719,7 +720,7 @@ class SimSingleCellRnaDataset(Dataset):
         if normalize:
             # Note that we normalize the ENTIRE DATASET as a whole
             # We don't subset till later, so all data splits have the same normalization
-            self.adata = adata_utils.normalize_count_table(self.adata)
+            self.adata = processing.normalize_count_table(self.adata)
 
         self.labels = None
         if labels_fname:

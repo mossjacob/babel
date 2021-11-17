@@ -1,6 +1,8 @@
 import copy
 import os
+
 from dataclasses import dataclass
+from pathlib import Path
 
 from babel.data.loaders import (
     SNARESEQ_RNA_DATA_KWARGS, SNARESEQ_ATAC_DATA_KWARGS
@@ -33,6 +35,7 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
     atac_data_kwargs["cluster_res"] = 0  # Do not bother clustering ATAC data
 
     if save_dir is not None:
+        save_dir = Path(save_dir)
         if not os.path.isdir(save_dir):
             assert not os.path.exists(save_dir)
             os.makedirs(save_dir)
@@ -69,6 +72,7 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
         adata_gex,
         valid_cluster_id=config.validcluster,
         test_cluster_id=config.testcluster,
+        cache_prefix=save_dir,
         **rna_data_kwargs,
     )
     atac_dataset = SingleCellDataset(

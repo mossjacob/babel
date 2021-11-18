@@ -33,15 +33,16 @@ from .loaders import (
 
 class SingleCellDataset(Dataset):
     """
-    Given a sparse matrix file, load in dataset
+    SingleCellDataset
 
-    can be things like sklearn MaxAbsScaler().fit_transform
+    Clipping is performed AFTER normalization
     Parameters:
+        adata: AnnData object containing counts normalised by size factors and logged.
         valid_cluster_id: Only used if data_split_by_cluster is on, default 0
         predefined_split: of type SingleCellDataset
+        pool_genomic_interval: if -1, then we pool based on proximity to gene
 
     """
-
     def __init__(
             self,
             adata: Union[AnnData, None],  # Should be size-factor normalised and logged counts
@@ -121,7 +122,7 @@ class SingleCellDataset(Dataset):
                 np.save(self.cache_prefix / fname, genes_reordered)
             self.adata = self.adata[:, genes_reordered]
 
-        self.__annotate_chroms(gtf_file)
+        self.__annotate_chroms(gtf_file)  # not that slow
         if self.autosomes_only:
             autosomal_idx = [
                 i
@@ -153,6 +154,17 @@ class SingleCellDataset(Dataset):
             var=pd.DataFrame(index=self.adata.var_names),
             obsm=self.adata.obsm
         )
+
+        cluster_keys = ['leiden', 'louvain']
+        cluster_prefixes = ['log', '']
+        cluster_vars = [self._size_norm_log_counts.obs, self.size_norm_counts.obs]
+
+        if self.cluster_res > 0:
+            for key in cluster_keys:
+                for prefix, var in zip(cluster_prefixes, cluster_vars):
+                    file = self.cache_prefix / f'{self.y_mode}_{prefix}_{key}.pkl'
+                    if file.exists():
+                        var[key] = pd.read_pickle(file)
         plot_utils.preprocess_anndata(
             self._size_norm_log_counts,
             louvain_resolution=self.cluster_res,
@@ -163,6 +175,11 @@ class SingleCellDataset(Dataset):
             louvain_resolution=self.cluster_res,
             leiden_resolution=self.cluster_res
         )
+        if self.cluster_res > 0:
+            for key in cluster_keys:
+                for prefix, var in zip(cluster_prefixes, cluster_vars):
+                    val = var[key]
+                    np.save(self.cache_prefix / f'{self.y_mode}_{prefix}_{key}.pkl', val)
         self.adata.X = utils.ensure_arr(self.adata.X)
 
         # Make sure the data is a sparse matrix

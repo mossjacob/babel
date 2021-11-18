@@ -58,7 +58,7 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
         filter_adata_cells_and_genes(adata, filter_config)
 
     # Normalize counts
-    adata_gex = normalize_count_table(  # Normalizes in place
+    adata_gex = normalize_count_table(  # Normalizes in place (quite slow)
         adata_gex,
         size_factors=rna_data_kwargs['calc_size_factors'],
         normalize=rna_data_kwargs['normalize'],

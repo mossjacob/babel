@@ -108,13 +108,13 @@ def preprocess_anndata(
         )  # Seurat default is 200 for large datasets, 500 for small datasets
     else:
         logging.info("Skipping UMAP as aready present")
-    if louvain_resolution > 0:
+    if louvain_resolution > 0 and 'louvain' not in a.obs:
         sc.tl.louvain(  # Depends on having neighbors or bbknn run first
             a, resolution=louvain_resolution, random_state=seed
         )  # Seurat also uses Louvain
     else:
         logging.info("Skipping louvain clustering")
-    if leiden_resolution > 0:
+    if leiden_resolution > 0 and 'leiden' not in a.obs:
         sc.tl.leiden(  # Depends on having neighbors or bbknn first
             a, resolution=leiden_resolution, random_state=seed, n_iterations=2
         )  # R runs 2 iterations

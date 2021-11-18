@@ -1,14 +1,14 @@
 # BABEL
 
+This is a fork of the [BABEL deep learning model](https://github.com/wukevin/babel). 
+
 BABEL is a deep learning model written in Python designed to translate between mutliple single cell modalities. Currently, it is designed to translate between scATAC-seq and scRNA-seq profiles, though we show proof-of-concept of BABEL integrating additional modalities like proteomics. BABEL does this by learning encoder networks that can project these modalities into a shared latent representation, and decoder networks that can take this representation and reconstruct expression or chromatin accessibility profiles.
 
-For more information, please see our peer-reviewed manuscript:
 
-*[Wu, Kevin E., Kathryn E. Yost, Howard Y. Chang, and James Zou. "BABEL enables cross-modality translation between multiomic profiles at single-cell resolution." Proceedings of the National Academy of Sciences 118, no. 15 (2021).](https://doi.org/10.1073/pnas.2023070118)*
 
 ## Installation
 
-We do not yet have a mechanism for "installing" BABEL directly from sources like `pip` or `conda` for the time being. Currently, BABEL is obtained by simply cloning the repository.
+- `pip install git+https://github.com/mossjacob/babel`
 
 After cloning the repository, the necessary software dependencies (i.e. the environment) to run BABEL can be installed using `conda`:
 
@@ -107,3 +107,9 @@ Both scripts for training and evaluation described above have many more options 
 
 ### Example usage and downstream analyses
 Under the `jupyter` folder, we have included an example notebook that describes how to infer expression from scATAC-seq using BABEL. We then take BABEL's PBMC ATAC to RNA predictions and perform downstream analysis and visualization. This notebook generates BABEL visualizations shown in Figure 3 of our manuscript.
+
+### References
+
+Moss, Jacob. 2021. BABEL package. 
+
+*[Wu, Kevin E., Kathryn E. Yost, Howard Y. Chang, and James Zou. "BABEL enables cross-modality translation between multiomic profiles at single-cell resolution." Proceedings of the National Academy of Sciences 118, no. 15 (2021).](https://doi.org/10.1073/pnas.2023070118)*

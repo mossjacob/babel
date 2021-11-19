@@ -86,17 +86,20 @@ def preprocess_anndata(
         raise NotImplementedError
     assert a.shape[0] >= 50, f"Got input with too few dimensions: {a.shape}"
     if 'X_pca' not in a.obsm:
+        logging.info('Calculating PCA')
         sc.pp.pca(a)
     else:
         logging.info("Skipping PCA as aready present")
 
     # if 'X_tsne' not in a.obsm:
     #     sc.tl.tsne(a, n_jobs=12, use_rep=use_rep)  # Representation defaults to X_pca
+    logging.info('Calculating neighbours')
     sc.pp.neighbors(
         a, use_rep=use_rep, n_neighbors=neighbors_n_neighbors, n_pcs=neighbors_n_pcs
     )  # Representation defaults to X_pca
     # https://rdrr.io/cran/Seurat/man/RunUMAP.html
     if 'X_umap' not in a.obsm:
+        logging.info('Calculating UMAP')
         sc.tl.umap(  # Does not have a rep, looks at neighbors
             a,
             maxiter=500,

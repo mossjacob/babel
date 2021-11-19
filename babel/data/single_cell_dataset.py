@@ -107,7 +107,7 @@ class SingleCellDataset(Dataset):
         if not isinstance(self.adata.X, scipy.sparse.csr_matrix):
             self.adata.X = scipy.sparse.csr_matrix(
                 self.adata.X
-            )  # Convert to sparse matrix
+            )  # Convert to sparse matrix (quite slow)
 
         # Attach obs/var annotations
         if sort_by_pos:
@@ -118,8 +118,8 @@ class SingleCellDataset(Dataset):
                 genes_reordered, chroms_reordered = reorder_genes_by_pos(
                     self.adata.var_names, gtf_file=gtf_file, return_chrom=True
                 )
-            if cache_prefix:
-                np.save(self.cache_prefix / fname, genes_reordered)
+                if cache_prefix:
+                    np.save(self.cache_prefix / fname, genes_reordered)
             self.adata = self.adata[:, genes_reordered]
 
         self.__annotate_chroms(gtf_file)  # not that slow

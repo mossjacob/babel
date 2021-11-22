@@ -27,7 +27,7 @@ class SnareConfig:
     linear:        bool = True
 
 
-def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
+def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, max_cells: int = None):
     rna_data_kwargs = copy.copy(SNARESEQ_RNA_DATA_KWARGS)
     rna_data_kwargs["data_split_by_cluster_log"] = not config.linear
     rna_data_kwargs["data_split_by_cluster"] = config.clustermethod
@@ -49,10 +49,18 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, load=True):
         adata_gex = adata_gex.T
     if atac_data_kwargs['transpose']:
         adata_atac = adata_atac.T
+    if max_cells is not None:
+        adata_atac = adata_atac[:max_cells]
+        adata_gex = adata_gex[:max_cells]
+
     # Filter and join gene and cell info
     for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
+        cell_info = data_kwargs['cell_info']
+        if max_cells is not None:
+            cell_info = cell_info[:max_cells]
+
         join_gene_info(adata, data_kwargs['gene_info'])
-        join_cell_info(adata, data_kwargs['cell_info'])
+        join_cell_info(adata, cell_info)
         annotate_basic_adata_metrics(adata)
         filter_config = get_filter_config_from_kwargs(data_kwargs)
         filter_adata_cells_and_genes(adata, filter_config)

@@ -107,7 +107,7 @@ class SingleCellDataset(Dataset):
         if not isinstance(self.adata.X, scipy.sparse.csr_matrix):
             self.adata.X = scipy.sparse.csr_matrix(
                 self.adata.X
-            )  # Convert to sparse matrix (quite slow)
+            )  # Convert to sparse matrix (quite slow (if low memory, otherwise fast))
 
         # Attach obs/var annotations
         if sort_by_pos:

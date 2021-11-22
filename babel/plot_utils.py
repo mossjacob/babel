@@ -87,7 +87,7 @@ def preprocess_anndata(
     assert a.shape[0] >= 50, f"Got input with too few dimensions: {a.shape}"
     if 'X_pca' not in a.obsm:
         logging.info('Calculating PCA')
-        sc.pp.pca(a)
+        # sc.pp.pca(a)
     else:
         logging.info("Skipping PCA as aready present")
 
@@ -100,15 +100,16 @@ def preprocess_anndata(
     # https://rdrr.io/cran/Seurat/man/RunUMAP.html
     if 'X_umap' not in a.obsm:
         logging.info('Calculating UMAP')
-        sc.tl.umap(  # Does not have a rep, looks at neighbors
-            a,
-            maxiter=500,
-            min_dist=0.3,  # Seurat default is 0.3, scanpy is 0.5
-            spread=1.0,  # Seurat default is 1.0
-            alpha=1.0,  # Seurat default starting learning rate is 1.0
-            gamma=1.0,  # Seurate default repulsion strength is 1.0
-            negative_sample_rate=5,  # Seurat default negative sample rate is 5
-        )  # Seurat default is 200 for large datasets, 500 for small datasets
+        if False:
+            sc.tl.umap(  # Does not have a rep, looks at neighbors
+                a,
+                maxiter=500,
+                min_dist=0.3,  # Seurat default is 0.3, scanpy is 0.5
+                spread=1.0,  # Seurat default is 1.0
+                alpha=1.0,  # Seurat default starting learning rate is 1.0
+                gamma=1.0,  # Seurate default repulsion strength is 1.0
+                negative_sample_rate=5,  # Seurat default negative sample rate is 5
+            )  # Seurat default is 200 for large datasets, 500 for small datasets
     else:
         logging.info("Skipping UMAP as aready present")
     if louvain_resolution > 0 and 'louvain' not in a.obs:

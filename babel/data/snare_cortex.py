@@ -1,5 +1,6 @@
 import copy
 import os
+import numpy as np
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,21 +50,24 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, max_cells: 
         adata_gex = adata_gex.T
     if atac_data_kwargs['transpose']:
         adata_atac = adata_atac.T
-    if max_cells is not None:
-        adata_atac = adata_atac[:max_cells]
-        adata_gex = adata_gex[:max_cells]
 
     # Filter and join gene and cell info
     for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
         cell_info = data_kwargs['cell_info']
-        if max_cells is not None:
-            cell_info = cell_info[:max_cells]
 
         join_gene_info(adata, data_kwargs['gene_info'])
         join_cell_info(adata, cell_info)
         annotate_basic_adata_metrics(adata)
         filter_config = get_filter_config_from_kwargs(data_kwargs)
         filter_adata_cells_and_genes(adata, filter_config)
+
+    if max_cells is not None:
+        sort_order_idx = np.argsort(adata_gex.obs_names)
+        sort_order_idx = sort_order_idx[:max_cells]
+        adata_gex = adata_gex[sort_order_idx]
+        sort_order_idx = np.argsort(adata_atac.obs_names)
+        sort_order_idx = sort_order_idx[:max_cells]
+        adata_atac = adata_atac[sort_order_idx]
 
     # Normalize counts
     adata_gex = normalize_count_table(  # Normalizes in place (quite slow)
@@ -95,7 +99,7 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, max_cells: 
     rna_dataset.size_norm_log_counts.write_h5ad(
         os.path.join(save_dir, "full_rna_log.h5ad")
     )
-    atac_dataset.adata.write_h5ad(os.path.join(save_dir, "full_atac.h5ad"))
+    # atac_dataset.adata.write_h5ad(os.path.join(save_dir, "full_atac.h5ad"))
 
     dual_subsets = list()
     for subset in ['train', 'valid', 'test']:

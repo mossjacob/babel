@@ -372,14 +372,14 @@ def get_chrom_from_genes(genes: List[str], gtf_file=MM10_GTF):
     return retval
 
 
-def get_chrom_from_intervals(intervals: List[str], strip_chr: bool = True):
+def get_chrom_from_intervals(intervals: List[str], sep=':', strip_chr: bool = True):
     """
     Given a list of intervals, return a list of chromosomes that those are on
 
-    >>> get_chrom_from_intervals(['chr2:100-200', 'chr3:100-222'])
+    >>> get_chrom_from_intervals(['chr2:100-200', 'chr3:100-222'], sep=':')
     ['2', '3']
     """
-    retval = [interval.split(":")[0].strip() for interval in intervals]
+    retval = [interval.split(sep)[0].strip() for interval in intervals]
     if strip_chr:
         retval = [chrom.strip("chr") for chrom in retval]
     return retval

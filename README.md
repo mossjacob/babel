@@ -1,6 +1,7 @@
 # BABEL
 
 This is a fork of the [BABEL deep learning model](https://github.com/wukevin/babel). 
+It is a work in progress Python package version, where 
 
 BABEL is a deep learning model written in Python designed to translate between mutliple single cell modalities. Currently, it is designed to translate between scATAC-seq and scRNA-seq profiles, though we show proof-of-concept of BABEL integrating additional modalities like proteomics. BABEL does this by learning encoder networks that can project these modalities into a shared latent representation, and decoder networks that can take this representation and reconstruct expression or chromatin accessibility profiles.
 

@@ -180,7 +180,7 @@ class SingleCellDataset(Dataset):
                 for prefix, var in zip(cluster_prefixes, cluster_vars):
                     val = var[key]
                     np.save(self.cache_prefix / f'{self.y_mode}_{prefix}_{key}.pkl', val)
-        self.adata.X = utils.ensure_arr(self.adata.X)
+        # self.adata.X = utils.ensure_arr(self.adata.X)
 
         # Make sure the data is a sparse matrix
         if not isinstance(self.adata.X, scipy.sparse.csr_matrix):
@@ -254,8 +254,9 @@ class SingleCellDataset(Dataset):
     def __annotate_chroms(self, gtf_file: str = "") -> None:
         """Annotates chromosome information on the var field, without the chr prefix"""
         # gtf_file can be empty if we're using atac intervals
+        sep = ':' if ':' in self.adata.var_names[0] else '-'
         feature_chroms = (
-            get_chrom_from_intervals(self.adata.var_names)
+            get_chrom_from_intervals(self.adata.var_names, sep=sep)
             if list(self.adata.var_names)[0].startswith("chr")
             else get_chrom_from_genes(self.adata.var_names, gtf_file)
         )

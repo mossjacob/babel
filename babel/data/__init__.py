@@ -1,6 +1,6 @@
 from .snare_cortex import load_or_build_cortex_dataset, SnareConfig
 from .single_cell_dataset import SingleCellDataset, SingleCellDatasetSplit
-from .datasets import PairedDataset
+from .datasets import PairedDataset, DummyDataset
 
 
 __all__ = [
@@ -9,4 +9,5 @@ __all__ = [
     'SingleCellDataset',
     'SingleCellDatasetSplit',
     'PairedDataset',
+    'DummyDataset',
 ]

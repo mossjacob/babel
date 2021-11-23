@@ -231,11 +231,11 @@ class SingleCellDataset(Dataset):
         )  # Skip calculation if we don't need
 
         # Perform file backing if necessary
-        self.data_raw_cache_fname = ""
+        self.adata_cache_fname = ""
         # if self.cache_prefix is not None:
-        #     self.data_raw_cache_fname = self.cache_prefix / f'{self.y_mode}.adata.h5ad'
-        #     logging.info(f"Setting cache at {self.data_raw_cache_fname}")
-        #     self.adata.filename = self.data_raw_cache_fname
+        #     self.adata_cache_fname = self.cache_prefix / f'{self.y_mode}.adata.h5ad'
+        #     logging.info(f"Setting cache at {self.adata_cache_fname}")
+        #     self.adata.filename = self.adata_cache_fname
         #     if hasattr(self, "_size_norm_counts"):
         #         size_norm_cache_name = self.cache_prefix / f'{self.y_mode}.size_norm_counts.h5ad'
         #         logging.info(
@@ -270,13 +270,13 @@ class SingleCellDataset(Dataset):
                 idx, names = get_indices_to_combine(
                     list(self.adata.var.index), interval=pool_genomic_interval
                 )
-                data_raw_aggregated = combine_array_cols_by_idx(  # Returns np ndarray
+                adata_aggregated = combine_array_cols_by_idx(  # Returns np ndarray
                     self.adata.X,
                     idx,
                 )
-                data_raw_aggregated = scipy.sparse.csr_matrix(data_raw_aggregated)
+                adata_aggregated = scipy.sparse.csr_matrix(adata_aggregated)
                 self.adata = AnnData(
-                    data_raw_aggregated,
+                    adata_aggregated,
                     obs=self.adata.obs,
                     var=pd.DataFrame(index=names),
                 )
@@ -285,9 +285,9 @@ class SingleCellDataset(Dataset):
                     pool_genomic_interval == -1
                 ), f"Invalid value: {pool_genomic_interval}"
                 # Pool based on proximity to genes
-                data_raw_aggregated, names = combine_by_proximity(self.adata)
+                adata_aggregated, names = combine_by_proximity(self.adata)
                 self.adata = AnnData(
-                    data_raw_aggregated,
+                    adata_aggregated,
                     obs=self.adata.obs,
                     var=pd.DataFrame(index=names),
                 )
@@ -297,14 +297,14 @@ class SingleCellDataset(Dataset):
             idx = get_indices_to_form_target_intervals(
                 self.adata.var.index, target_intervals=pool_genomic_interval
             )
-            data_raw_aggregated = scipy.sparse.csr_matrix(
+            adata_aggregated = scipy.sparse.csr_matrix(
                 combine_array_cols_by_idx(
                     self.adata.X,
                     idx,
                 )
             )
             self.adata = AnnData(
-                data_raw_aggregated,
+                adata_aggregated,
                 obs=self.adata.obs,
                 var=pd.DataFrame(index=pool_genomic_interval),
             )

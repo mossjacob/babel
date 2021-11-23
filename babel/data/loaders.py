@@ -808,9 +808,9 @@ def repool_atac_bins(x: AnnData, target_bins: List[str]) -> AnnData:
         x.var.index, target_intervals=target_bins
     )
     # This already gives a sparse matrix
-    data_raw_aggregated = combine_array_cols_by_idx(x.X, idx)
+    adata_aggregated = combine_array_cols_by_idx(x.X, idx)
     retval = AnnData(
-        data_raw_aggregated,
+        adata_aggregated,
         obs=x.obs,
         var=pd.DataFrame(index=target_bins),
     )
@@ -822,8 +822,8 @@ def repool_genes(x: AnnData, target_genes: List[str]) -> AnnData:
     Reorder (insert/drop cols) from x to match given target genes
     """
     idx = get_indices_to_form_target_genes(x.var_names, target_genes=target_genes)
-    data_raw_aggregated = combine_array_cols_by_idx(x.X, idx)
-    return AnnData(data_raw_aggregated, obs=x.obs, var=pd.DataFrame(index=target_genes))
+    adata_aggregated = combine_array_cols_by_idx(x.X, idx)
+    return AnnData(adata_aggregated, obs=x.obs, var=pd.DataFrame(index=target_genes))
 
 
 def atac_intervals_to_bins_per_chrom(intervals: Iterable[str]) -> List[int]:

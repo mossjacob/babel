@@ -435,10 +435,7 @@ def normalize_count_table(
 
     if log_trans or size_factors or normalize:
         x.raw = x.copy()  # Store the original counts as .raw
-    if 'log_norm' in x.layers:
-        logging.info("Data already log-normalized. Skipping step.")
-        x.X = x.layers['log_norm']
-        return x
+
     # else:
     #     x.raw = x
     if size_factors:

@@ -51,6 +51,8 @@ def load_or_build_cortex_dataset(config: SnareConfig, save_dir=None, max_cells: 
     if atac_data_kwargs['transpose']:
         adata_atac = adata_atac.T
 
+    adata_atac.X[adata_atac.X.nonzero()] = 1  # .X here is a csr matrix
+
     # Filter and join gene and cell info
     for adata, data_kwargs in zip([adata_gex, adata_atac], [rna_data_kwargs, atac_data_kwargs]):
         cell_info = data_kwargs['cell_info']

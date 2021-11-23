@@ -45,7 +45,7 @@ class SingleCellDataset(Dataset):
     """
     def __init__(
             self,
-            adata: Union[AnnData, None],  # Should be size-factor normalised and logged counts
+            adata: Union[AnnData, None],
             mode: str = "all",
             data_split_by_cluster: str = "leiden",
             valid_cluster_id: int = 0,

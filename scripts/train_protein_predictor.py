@@ -225,7 +225,7 @@ def main():
         test_cluster_id=args.testcluster,
         **rna_data_kwargs,
     )
-    full_sc_rna_dataset.data_raw.write_h5ad(os.path.join(args.outdir, "full_rna.h5ad"))
+    full_sc_rna_dataset.adata.write_h5ad(os.path.join(args.outdir, "full_rna.h5ad"))
 
     train_valid_test_dsets = []
     for mode in ["all", "train", "valid", "test"]:
@@ -233,7 +233,7 @@ def main():
         sc_rna_dataset = sc_data_loaders.SingleCellDatasetSplit(
             full_sc_rna_dataset, split=mode
         )
-        sc_rna_dataset.data_raw.write_h5ad(
+        sc_rna_dataset.adata.write_h5ad(
             os.path.join(args.outdir, f"{mode}_rna.h5ad")
         )  # Write RNA input
         sc_atac_dummy_dataset = sc_data_loaders.DummyDataset(
@@ -257,7 +257,7 @@ def main():
             obs_names=sc_rna_dataset.obs_names,
             transpose=not args.notrans,
         )
-        sc_protein_dataset.data_raw.write_h5ad(
+        sc_protein_dataset.adata.write_h5ad(
             os.path.join(args.outdir, f"{mode}_protein.h5ad")
         )  # Write protein
         # x = 16 dimensional encoded layer, y = 25 dimensional protein array
@@ -277,7 +277,7 @@ def main():
         x[1].shape == y[1].shape == z[1].shape
     ), f"Got mismatched shapes: {x[1].shape} {y[1].shape} {z[1].shape}"
 
-    protein_markers = list(sc_protein_dataset.data_raw.var_names)
+    protein_markers = list(sc_protein_dataset.adata.var_names)
     with open(os.path.join(args.outdir, "protein_proteins.txt"), "w") as sink:
         sink.write("\n".join(protein_markers) + "\n")
     assert len(

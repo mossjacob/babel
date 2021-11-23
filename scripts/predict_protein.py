@@ -105,7 +105,7 @@ def main():
         sc_dual_encoded_dataset = sc_data_loaders.EncodedDataset(
             sc_dual_dataset, model=babel, input_mode="RNA"
         )
-        cell_barcodes = list(sc_rna_dset.data_raw.obs_names)
+        cell_barcodes = list(sc_rna_dset.adata.obs_names)
         encoded = sc_dual_encoded_dataset.encoded
     else:
         sc_atac_dset, _loaded_atac_bins = load_atac_files_for_eval(
@@ -120,7 +120,7 @@ def main():
         sc_dual_encoded_dataset = sc_data_loaders.EncodedDataset(
             sc_dual_dataset, model=babel, input_mode="ATAC"
         )
-        cell_barcodes = list(sc_atac_dset.data_raw.obs_names)
+        cell_barcodes = list(sc_atac_dset.adata.obs_names)
         encoded = sc_dual_encoded_dataset.encoded
 
     # Array of preds

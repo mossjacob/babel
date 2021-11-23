@@ -1,7 +1,11 @@
 import skorch
 import skorch.utils
+import torch
+import numpy as np
 
+import torch.nn.functional as F
 from scipy import sparse
+from babel.model_utils import recursive_to_device
 
 
 class AutoEncoderSkorchNet(skorch.NeuralNet):
@@ -85,9 +89,9 @@ class PairedAutoEncoderSkorchNet(skorch.NeuralNet):
         iterator = self.get_iterator(dataset, training=training)
         for data in iterator:
             Xi = skorch.dataset.unpack_data(data)[0]
-            yp = self.evaluation_step(Xi, training=training)
+            yp = self.evaluation_step(data, training=training)
             if isinstance(yp, tuple):
-                yield model_utils.recursive_to_device(yp)  # <- modification here
+                yield recursive_to_device(yp)  # <- modification here
             else:
                 yield yp.to(device)
 

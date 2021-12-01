@@ -527,6 +527,10 @@ class SingleCellDataset(Dataset):
         assert self._size_norm_counts.shape == self.adata.shape
         return self._size_norm_counts
 
+    @size_norm_counts.setter
+    def size_norm_counts(self, value):
+        self._size_norm_counts = value
+
     def _set_size_norm_counts(self) -> AnnData:
         logging.info(f"Setting size normalized counts")
         raw_counts_anndata = AnnData(
